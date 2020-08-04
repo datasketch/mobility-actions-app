@@ -14,14 +14,14 @@ library(hotr)
 frtypes_doc <- suppressWarnings(yaml::read_yaml("conf/frtypes.yaml"))
 
 # load data from google sheets
-googleSheet_embed_link <- "https://docs.google.com/spreadsheets/d/1T8LE4p0-L96xiVtHsqARHiLsHsFwS8oQAT1Y2KteMXc/edit?ts=5f28677d#gid=1851697206"
-df <- read_sheet(googleSheet_embed_link) %>%
-  select(Country, `Master action types`, ML.status, Space, Time, Intensity, Scale, Trigger,
-         `How actions were selected`, `Infrastructure affected / removed`, `Implementation & management`,
-         `Public policy implementation`, Strategy, `Road Safety Perception & Comfort`,
-         MW.purpose, `MW.anticipated.longevity`)
+# googleSheet_embed_link <- "https://docs.google.com/spreadsheets/d/1T8LE4p0-L96xiVtHsqARHiLsHsFwS8oQAT1Y2KteMXc/edit?ts=5f28677d#gid=1851697206"
+# df <- read_sheet(googleSheet_embed_link) %>%
+#   select(Country, `Master action types`, ML.status, Space, Time, Intensity, Scale, Trigger,
+#          `How actions were selected`, `Infrastructure affected / removed`, `Implementation & management`,
+#          `Public policy implementation`, Strategy, `Road Safety Perception & Comfort`,
+#          MW.purpose, `MW.anticipated.longevity`)
 
-# df <- readRDS("temp_data.RDS")
+df <- readRDS("temp_data.RDS")
 
 
 # Define UI for data download app ----
@@ -45,22 +45,13 @@ ui <- panelsPage(panel(title = "Choose dataset",
                        body = withLoader(uiOutput("viz"),
                                          type = "image",
                                          loader = "img/loading_fucsia.gif"),
-                       footer = uiOutput("icons")))
+                       footer = uiOutput("viz_icons")))
 
 
 server <- function(input, output, session) {
 
   output$viz <- renderUI({
     highchartOutput("view_hgch_viz", height = 500)
-  })
-
-  output$icons <- renderUI({
-    req(input$dataset)
-    if(input$dataset == "dat_viz"){
-      uiOutput("viz_icons")
-    } else {
-      uiOutput("map_icons")
-    }
   })
 
   output$choose_data <- renderUI({
@@ -170,20 +161,16 @@ server <- function(input, output, session) {
     }
   })
 
-  # output$map_icons <- renderUI({
-  #   buttonImageInput('map_selection',
-  #                    "Viz type",
-  #                    images = possible_viz(),
-  #                    path = 'img/svg/map/',
-  #                    format = 'svg',
-  #                    active = actual_but$active)
-  # })
-
   output$viz_icons <- renderUI({
+    if(input$dataset == "dat_viz"){
+      path <- 'img/svg/viz/'
+    } else {
+      path <- 'img/svg/map/'
+    }
     buttonImageInput('viz_selection',
                      "Viz type",
                      images = possible_viz(),
-                     path = 'img/svg/viz/',
+                     path = path,
                      format = 'svg',
                      active = actual_but$active)
   })
