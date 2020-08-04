@@ -1,0 +1,238 @@
+# load in packages
+library(shiny)
+library(dplyr)
+library(shinycustomloader)
+library(googlesheets4)
+
+# load in ds packages
+library(dsmodules)
+library(shinyinvoer)
+library(shinypanels)
+library(lfltmagic)
+library(hotr)
+
+frtypes_doc <- suppressWarnings(yaml::read_yaml("conf/frtypes.yaml"))
+
+# load data from google sheets
+googleSheet_embed_link <- "https://docs.google.com/spreadsheets/d/1T8LE4p0-L96xiVtHsqARHiLsHsFwS8oQAT1Y2KteMXc/edit?ts=5f28677d#gid=1851697206"
+df <- read_sheet(googleSheet_embed_link) %>%
+  select(Country, `Master action types`, ML.status, Space, Time, Intensity, Scale, Trigger,
+         `How actions were selected`, `Infrastructure affected / removed`, `Implementation & management`,
+         `Public policy implementation`, Strategy, `Road Safety Perception & Comfort`,
+         MW.purpose, `MW.anticipated.longevity`)
+
+# df <- readRDS("temp_data.RDS")
+
+
+# Define UI for data download app ----
+ui <- panelsPage(panel(title = "Choose dataset",
+                       width = 200,
+                       color = "chardonnay",
+                       body = uiOutput("choose_data")),
+                 panel(title = "Choose variables",
+                       width = 400,
+                       color = "chardonnay",
+                       body = div(
+                         div(
+                           uiOutput("select_var"),
+                           uiOutput("dataset")
+                         )
+                       )),
+                 panel(title = "Viz",
+                       title_plugin = uiOutput("download"),
+                       color = "chardonnay",
+                       can_collapse = FALSE,
+                       body = withLoader(uiOutput("viz"),
+                                         type = "image",
+                                         loader = "img/loading_fucsia.gif"),
+                       footer = uiOutput("icons")))
+
+
+server <- function(input, output, session) {
+
+  output$viz <- renderUI({
+    highchartOutput("view_hgch_viz", height = 500)
+  })
+
+  output$icons <- renderUI({
+    req(input$dataset)
+    if(input$dataset == "dat_viz"){
+      uiOutput("viz_icons")
+    } else {
+      uiOutput("map_icons")
+    }
+  })
+
+  output$choose_data <- renderUI({
+    selectInput("dataset", "Choose dataset to visualize:",
+                selected = "dat_viz",
+                c("COVID mobility actions" = "dat_viz",
+                  "Map - COVID mobility actions by country" = "dat_map"))
+  })
+
+  inputData <- reactive({
+    req(input$dataset)
+    if(input$dataset == "dat_viz"){
+      df %>% select(-Country)
+    } else {
+      df
+    }
+  })
+
+  # Vista de datos ----------------------------------------------------------
+
+  output$dataset <- renderUI({
+    if (is.null(inputData()))
+      return()
+    suppressWarnings(
+      hotr("data_input", data = inputData(), options = list(height = 530))
+    )
+  })
+
+  data_fringe <- reactive({
+    suppressWarnings( hotr::hotr_fringe(input$data_input))
+  })
+
+  data_load <- reactive({
+    data_fringe()$data
+  })
+
+  dic_load <- reactive({
+    data_fringe()$dic
+  })
+
+
+  output$select_var <- renderUI({
+    available_fTypes <- names(frtypes_doc)
+    data_ftype <- data_fringe()$frtype
+    if(is.null(dic_load)) return()
+
+    if (data_ftype %in% available_fTypes) {
+      data_order <- dic_load()$id
+    } else if (grepl("Cat|Yea|Dat",data_ftype)&grepl("Num",data_ftype)){
+      data_order <- c(dic_load()$id[grep("Cat|Yea|Dat", dic_load()$hdType)[1]],
+                      dic_load()$id[grep("Num", dic_load()$hdType)[1]])
+    } else {
+      data_order <- dic_load()$id[grep("Cat|Num", dic_load()$hdType)[1]]
+    }
+
+    list_var <- dic_load()$id
+    if (is.null(list_var)) return()
+    names(list_var) <- dic_load()$label[match(list_var, dic_load()$id)]
+
+
+    selectizeInput("var_order",
+                   div(class="title-data-select","Select up to two variables from the dropdown:"),
+                   choices = list_var,
+                   multiple = TRUE,
+                   # selected = data_order,
+                   options = list(plugins= list('remove_button', 'drag_drop'))
+    )
+  })
+
+  # Preparación data para graficar ------------------------------------------
+
+  data_draw <- reactive({
+    var_select <- input$var_order
+    if (is.null(var_select)) return()
+    d <- data_load()[var_select]
+    names(d) <- dic_draw()$label
+    d
+  })
+
+  dic_draw <- reactive({
+    var_select <- input$var_order
+    if (is.null(var_select)) return()
+    dic_load() %>% filter(id %in% var_select)
+  })
+
+  ftype_draw <- reactive({
+    if (is.null(dic_draw())) return()
+    paste0(dic_draw()$hdType, collapse = "-")
+  })
+
+  possible_viz <- reactive({
+    if (is.null(ftype_draw())) return()
+    frtypes_doc[[ftype_draw()]]
+  })
+
+
+  actual_but <- reactiveValues(active = 'bar')
+
+  observe({
+    viz_rec <- possible_viz()
+    if (is.null(viz_rec)) return()
+    if (is.null(input$viz_selection)) return()
+    if (!( input$viz_selection %in% viz_rec)) {
+      actual_but$active <- viz_rec[1]
+    } else {
+      actual_but$active <- input$viz_selection
+    }
+  })
+
+  # output$map_icons <- renderUI({
+  #   buttonImageInput('map_selection',
+  #                    "Viz type",
+  #                    images = possible_viz(),
+  #                    path = 'img/svg/map/',
+  #                    format = 'svg',
+  #                    active = actual_but$active)
+  # })
+
+  output$viz_icons <- renderUI({
+    buttonImageInput('viz_selection',
+                     "Viz type",
+                     images = possible_viz(),
+                     path = 'img/svg/viz/',
+                     format = 'svg',
+                     active = actual_but$active)
+  })
+
+  # Renderizar highchart plot -----------------------------------------------
+
+  viz_name <- reactive({
+    if (is.null(ftype_draw())) return()
+    if (ftype_draw() == "") return()
+    ctype <- gsub("-", "", ftype_draw())
+    gtype <- actual_but$active
+    if (is.null(gtype)) return()
+    typeV <- paste0('hgch_', gtype, '_', ctype)
+    typeV
+  })
+
+  hgch_viz <- reactive({
+    if (is.null(viz_name())) return()
+    # viz <- do.call(viz_name(), c(list(data = data_draw(),
+    #                                   opts_viz(), theme = theme_draw()
+    #
+    # )))
+    viz <- do.call(viz_name(), c(list(data = data_draw()
+
+    )))
+    viz
+  })
+
+  output$view_hgch_viz <- renderHighchart({
+    viz <- hgch_viz()
+    if (is.null(viz)) return()
+    suppressWarnings(
+      viz
+    )
+  })
+
+  # output$view_lflt_map <- renderLeaflet({
+  #
+  # })
+
+  output$download <- renderUI({
+    downloadImageUI("download_plot", dropdownLabel = "Download plot", formats = c("html","jpeg", "pdf", "png", "link"), display = "dropdown")
+  })
+
+
+  callModule(downloadImage, "download_plot", graph = hgch_viz(),
+             lib = "highcharter", formats = c("html","jpeg", "pdf", "png", "link"))
+
+}
+
+
+shinyApp(ui, server)
