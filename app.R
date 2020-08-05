@@ -33,9 +33,10 @@ ui <- panelsPage(panel(title = "Choose data",
                        title_plugin = uiOutput("download"),
                        color = "chardonnay",
                        can_collapse = FALSE,
-                       body = withLoader(uiOutput("viz"),
-                                         type = "image",
-                                         loader = "img/loading_fucsia.gif"),
+                       # body = withLoader(uiOutput("viz"),
+                       #                   type = "image",
+                       #                   loader = "img/loading_fucsia.gif"),
+                       body = uiOutput("viz"),
                        footer = uiOutput("viz_icons")))
 
 
@@ -51,7 +52,7 @@ server <- function(input, output, session) {
 
   output$choose_data <- renderUI({
     selectInput("dataset", "Choose type of visualisation:",
-                selected = "dat_viz",
+                selected = "dat_map",
                 c("Explorative visualisation" = "dat_viz",
                   "Actions by geography" = "dat_map"))
   })
@@ -254,12 +255,21 @@ server <- function(input, output, session) {
   })
 
   output$download <- renderUI({
-    downloadImageUI("download_plot", dropdownLabel = "Download plot", formats = c("html","jpeg", "pdf", "png", "link"), display = "dropdown")
+    downloadImageUI("download_plot", dropdownLabel = "Download", formats = c("html","jpeg", "pdf", "png"), display = "dropdown")
   })
 
+  download_opts <- reactive({
+    if(input$dataset == "dat_viz"){
+      list(graph = hgch_viz(),
+           lib = "highcharter")
+    } else {
+      list(graph = lftl_viz(),
+           lib = "highcharter")
+    }
+  })
 
-  callModule(downloadImage, "download_plot", graph = hgch_viz(),
-             lib = "highcharter", formats = c("html","jpeg", "pdf", "png", "link"))
+  callModule(downloadImage, "download_plot", graph = download_opts()$graph,
+             lib = download_opts()$lib, formats = c("html","jpeg", "pdf", "png"))
 
 }
 
