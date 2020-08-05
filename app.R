@@ -2,6 +2,7 @@
 library(shiny)
 library(dplyr)
 library(shinycustomloader)
+library(rgdal)
 
 # load in ds packages
 library(dsmodules)
@@ -27,6 +28,8 @@ ui <- panelsPage(panel(title = "Choose data",
                          div(
                            uiOutput("choose_data"),
                            uiOutput("select_var")
+                           # ,
+                           # uiOutput("select_category")
                          )
                        )),
                  panel(title = "Visualise data",
@@ -66,6 +69,13 @@ server <- function(input, output, session) {
     }
   })
 
+  # output$select_category <- renderUI({
+  #   if (input$dataset == "dat_viz" | dic_draw()$label == "Actions total") return ()
+  #   selectInput("selected_cat",
+  #               div(class="title-data-select","Select the category:"),
+  #               choices = list_var)
+  # })
+
   # Vista de datos ----------------------------------------------------------
 
   data_fringe <- reactive({
@@ -103,6 +113,7 @@ server <- function(input, output, session) {
       selectizeInput("var_order",
                      div(class="title-data-select","Select up to two variables:"),
                      choices = list_var,
+                     selected = "action_types",
                      multiple = TRUE,
                      options = list(maxItems = 2,
                                     plugins= list('remove_button', 'drag_drop')))
@@ -136,9 +147,9 @@ server <- function(input, output, session) {
       paste0(dic_draw()$hdType, collapse = "-")
     } else {
       if (is.null(dic_draw())) {
-        x <- "Gcd"
+        x <- "GcdNum"
       } else if (dic_draw()$label == "Actions total"){
-        x <- "Gcd"
+        x <- "GcdNum"
       } else {
         x <- paste0(dic_draw()$hdType, collapse = "-")
         if (x == "Num") {
@@ -238,9 +249,10 @@ server <- function(input, output, session) {
     # opts <- c(opts_viz(), theme_draw())
     data <- data_draw()
     if(is.null(data) | dic_draw()$label == "Actions total"){
-      data <- df %>% select(Country.code)
+      data <- df %>% group_by(Country.code, Country) %>% summarise(Actions = n()) %>% select(Country.code, Actions, Country)
       opts <- dsvizopts::merge_dsviz_options(map_color_scale = "Custom",
-                                             map_cutoff_points = c(10, 25, 50, 100))
+                                             map_cutoff_points = c(10, 25, 50, 100),
+                                             tooltip = "<b>Country:</b> {Country}<br/><b>Actions:</b> {Actions}")
     } else {
       data <- cbind(df %>% select(Country.code), data)
       opts <- dsvizopts::merge_dsviz_options()
