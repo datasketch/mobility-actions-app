@@ -13,7 +13,4 @@
 rsconnect/
 
 # Other files
-exploration.R
-scratch.R
-temp_data.csv
-temp_data.RDS
+explore/
