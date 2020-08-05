@@ -27,9 +27,8 @@ ui <- panelsPage(panel(title = "Choose data",
                        body = div(
                          div(
                            uiOutput("choose_data"),
-                           uiOutput("select_var")
-                           # ,
-                           # uiOutput("select_category")
+                           uiOutput("select_var"),
+                           uiOutput("select_category")
                          )
                        )),
                  panel(title = "Visualise data",
@@ -69,12 +68,12 @@ server <- function(input, output, session) {
     }
   })
 
-  # output$select_category <- renderUI({
-  #   if (input$dataset == "dat_viz" | dic_draw()$label == "Actions total") return ()
-  #   selectInput("selected_cat",
-  #               div(class="title-data-select","Select the category:"),
-  #               choices = list_var)
-  # })
+  output$select_category <- renderUI({
+    if (input$dataset == "dat_viz" | dic_draw()$label == "Actions total") return ()
+    selectInput("selected_cat",
+                div(class="title-data-select","Select the category:"),
+                choices = data_draw() %>% pull() %>% unique())
+  })
 
   # Vista de datos ----------------------------------------------------------
 
@@ -155,7 +154,7 @@ server <- function(input, output, session) {
         if (x == "Num") {
           x <- "GcdNum"
         } else if (x == "Cat"){
-          x <- "GcdCat"
+          x <- "GcdNum"
         }
       }
       x
@@ -254,8 +253,10 @@ server <- function(input, output, session) {
                                              map_cutoff_points = c(10, 25, 50, 100),
                                              tooltip = "<b>Country:</b> {Country}<br/><b>Actions:</b> {Actions}")
     } else {
-      data <- cbind(df %>% select(Country.code), data)
-      opts <- dsvizopts::merge_dsviz_options()
+      req(input$selected_cat)
+      data <- cbind(df %>% select(Country.code, Country), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
+        group_by(Country.code, Country) %>% summarise(Count = n()) %>% select(Country.code, Count, Country)
+      opts <- dsvizopts::merge_dsviz_options(tooltip = "<b>Country:</b> {Country}<br/><b>Count:</b> {Count}")
     }
     do.call(viz, c(list(data = data, opts = opts
     ))
