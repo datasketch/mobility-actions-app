@@ -50,10 +50,10 @@ server <- function(input, output, session) {
   })
 
   output$choose_data <- renderUI({
-    selectInput("dataset", "Choose dataset to visualize:",
+    selectInput("dataset", "Choose type of visualisation:",
                 selected = "dat_viz",
-                c("COVID mobility actions" = "dat_viz",
-                  "Map - COVID mobility actions by country" = "dat_map"))
+                c("Explorative visualisation" = "dat_viz",
+                  "Actions by geography" = "dat_map"))
   })
 
   inputData <- reactive({
