@@ -2,7 +2,6 @@
 library(shiny)
 library(dplyr)
 library(shinycustomloader)
-library(googlesheets4)
 
 # load in ds packages
 library(dsmodules)
@@ -16,17 +15,9 @@ library(hgchmagic)
 frtypes_doc_viz <- suppressWarnings(yaml::read_yaml("conf/frtypes_viz.yaml"))
 frtypes_doc_map <- suppressWarnings(yaml::read_yaml("conf/frtypes_map.yaml"))
 
-# load data from google sheets
-googleSheet_embed_link <- "https://docs.google.com/spreadsheets/d/1T8LE4p0-L96xiVtHsqARHiLsHsFwS8oQAT1Y2KteMXc/edit?ts=5f28677d#gid=1851697206"
-df <- read_sheet(googleSheet_embed_link) %>%
-  select(Country, `Action types` = `Master action types`, Status = ML.status, Space, Time, Intensity, Scale, Trigger,
-         `How actions were selected`, `Infrastructure affected / removed`, `Implementation & management`,
-         `Public policy implementation`, Strategy, `Road Safety Perception & Comfort`,
-         Purpose = MW.purpose, `Anticipated longevity`= `MW.anticipated.longevity`) %>%
+# load data
+df <- readRDS("data/covid_mobility_actions.RDS") %>%
   mutate(Country = Gnm(Country))
-
-# df <- readRDS("explore/temp_data.RDS") %>%
-#   mutate(Country = Gnm(Country))
 
 
 # Define UI for data download app ----
