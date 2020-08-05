@@ -16,8 +16,7 @@ frtypes_doc_viz <- suppressWarnings(yaml::read_yaml("conf/frtypes_viz.yaml"))
 frtypes_doc_map <- suppressWarnings(yaml::read_yaml("conf/frtypes_map.yaml"))
 
 # load data
-df <- readRDS("data/covid_mobility_actions.RDS") %>%
-  mutate(Country = Gnm(Country))
+df <- readRDS("data/covid_mobility_actions.RDS")
 
 
 # Define UI for data download app ----
@@ -60,9 +59,9 @@ server <- function(input, output, session) {
   inputData <- reactive({
     req(input$dataset)
     if(input$dataset == "dat_viz"){
-      df %>% select(-Country)
+      df %>% select(-Country, -Country.code)
     } else {
-      df %>% rename(`Actions total` = Country)
+      df %>% rename(`Actions total` = Country.code) %>% select(-Country)
     }
   })
 
@@ -136,15 +135,15 @@ server <- function(input, output, session) {
       paste0(dic_draw()$hdType, collapse = "-")
     } else {
       if (is.null(dic_draw())) {
-        x <- "Gnm"
+        x <- "Gcd"
       } else if (dic_draw()$label == "Actions total"){
-        x <- "Gnm"
+        x <- "Gcd"
       } else {
         x <- paste0(dic_draw()$hdType, collapse = "-")
         if (x == "Num") {
-          x <- "GnmNum"
+          x <- "GcdNum"
         } else if (x == "Cat"){
-          x <- "GnmCat"
+          x <- "GcdCat"
         }
       }
       x
@@ -238,11 +237,14 @@ server <- function(input, output, session) {
     # opts <- c(opts_viz(), theme_draw())
     data <- data_draw()
     if(is.null(data) | dic_draw()$label == "Actions total"){
-      data <- df %>% select(Country)
+      data <- df %>% select(Country.code)
+      opts <- dsvizopts::merge_dsviz_options(map_color_scale = "Custom",
+                                             map_cutoff_points = c(10, 25, 50, 100))
     } else {
-      data <- cbind(df %>% select(Country), data)
+      data <- cbind(df %>% select(Country.code), data)
+      opts <- dsvizopts::merge_dsviz_options()
     }
-    do.call(viz, c(list(data = data
+    do.call(viz, c(list(data = data, opts = opts
     ))
     )
   })
