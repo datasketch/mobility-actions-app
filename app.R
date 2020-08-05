@@ -21,20 +21,16 @@ df <- readRDS("data/covid_mobility_actions.RDS") %>%
 
 
 # Define UI for data download app ----
-ui <- panelsPage(panel(title = "Choose dataset",
+ui <- panelsPage(panel(title = "Choose data",
                        width = 200,
-                       color = "chardonnay",
-                       body = uiOutput("choose_data")),
-                 panel(title = "Choose variables",
-                       width = 400,
                        color = "chardonnay",
                        body = div(
                          div(
-                           uiOutput("select_var"),
-                           uiOutput("dataset")
+                           uiOutput("choose_data"),
+                           uiOutput("select_var")
                          )
                        )),
-                 panel(title = "Viz",
+                 panel(title = "Visualise data",
                        title_plugin = uiOutput("download"),
                        color = "chardonnay",
                        can_collapse = FALSE,
@@ -72,16 +68,8 @@ server <- function(input, output, session) {
 
   # Vista de datos ----------------------------------------------------------
 
-  output$dataset <- renderUI({
-    if (is.null(inputData()))
-      return()
-    suppressWarnings(
-      hotr("data_input", data = inputData(), options = list(height = 530))
-    )
-  })
-
   data_fringe <- reactive({
-    suppressWarnings( hotr::hotr_fringe(input$data_input))
+    fringe(inputData())
   })
 
   data_load <- reactive({
