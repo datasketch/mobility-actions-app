@@ -25,7 +25,7 @@ df <- read_sheet(googleSheet_embed_link) %>%
          Purpose = MW.purpose, `Anticipated longevity`= `MW.anticipated.longevity`) %>%
   mutate(Country = Gnm(Country))
 
-# df <- readRDS("temp_data.RDS") %>%
+# df <- readRDS("explore/temp_data.RDS") %>%
 #   mutate(Country = Gnm(Country))
 
 
