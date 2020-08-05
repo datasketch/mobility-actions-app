@@ -11,21 +11,22 @@ library(shinypanels)
 library(lfltmagic)
 library(hotr)
 library(homodatum)
+library(hgchmagic)
 
 frtypes_doc_viz <- suppressWarnings(yaml::read_yaml("conf/frtypes_viz.yaml"))
 frtypes_doc_map <- suppressWarnings(yaml::read_yaml("conf/frtypes_map.yaml"))
 
 # load data from google sheets
-# googleSheet_embed_link <- "https://docs.google.com/spreadsheets/d/1T8LE4p0-L96xiVtHsqARHiLsHsFwS8oQAT1Y2KteMXc/edit?ts=5f28677d#gid=1851697206"
-# df <- read_sheet(googleSheet_embed_link) %>%
-#   select(Country, `Master action types`, ML.status, Space, Time, Intensity, Scale, Trigger,
-#          `How actions were selected`, `Infrastructure affected / removed`, `Implementation & management`,
-#          `Public policy implementation`, Strategy, `Road Safety Perception & Comfort`,
-#          MW.purpose, `MW.anticipated.longevity`) %>%
-#   mutate(Country = Gnm(Country))
-
-df <- readRDS("temp_data.RDS") %>%
+googleSheet_embed_link <- "https://docs.google.com/spreadsheets/d/1T8LE4p0-L96xiVtHsqARHiLsHsFwS8oQAT1Y2KteMXc/edit?ts=5f28677d#gid=1851697206"
+df <- read_sheet(googleSheet_embed_link) %>%
+  select(Country, `Action types` = `Master action types`, Status = ML.status, Space, Time, Intensity, Scale, Trigger,
+         `How actions were selected`, `Infrastructure affected / removed`, `Implementation & management`,
+         `Public policy implementation`, Strategy, `Road Safety Perception & Comfort`,
+         Purpose = MW.purpose, `Anticipated longevity`= `MW.anticipated.longevity`) %>%
   mutate(Country = Gnm(Country))
+
+# df <- readRDS("temp_data.RDS") %>%
+#   mutate(Country = Gnm(Country))
 
 
 # Define UI for data download app ----
@@ -74,7 +75,7 @@ server <- function(input, output, session) {
     if(input$dataset == "dat_viz"){
       df %>% select(-Country)
     } else {
-      df %>% select(-Country)
+      df %>% rename(`Actions total` = Country)
     }
   })
 
@@ -119,14 +120,18 @@ server <- function(input, output, session) {
     if (is.null(list_var)) return()
     names(list_var) <- dic_load()$label[match(list_var, dic_load()$id)]
 
-
-    selectizeInput("var_order",
-                   div(class="title-data-select","Select up to two variables from the dropdown:"),
-                   choices = list_var,
-                   multiple = TRUE,
-                   # selected = data_order,
-                   options = list(plugins= list('remove_button', 'drag_drop'))
-    )
+    if(input$dataset == "dat_viz"){
+      selectizeInput("var_order",
+                     div(class="title-data-select","Select up to two variables:"),
+                     choices = list_var,
+                     multiple = TRUE,
+                     options = list(maxItems = 2,
+                                    plugins= list('remove_button', 'drag_drop')))
+    } else {
+      selectInput("var_order",
+                     div(class="title-data-select","Select a variable to show on the map:"),
+                     choices = list_var)
+    }
   })
 
   # Preparación data para graficar ------------------------------------------
@@ -151,8 +156,9 @@ server <- function(input, output, session) {
       if (is.null(dic_draw())) return()
       paste0(dic_draw()$hdType, collapse = "-")
     } else {
-      # browser()
       if (is.null(dic_draw())) {
+        x <- "Gnm"
+      } else if (dic_draw()$label == "Actions total"){
         x <- "Gnm"
       } else {
         x <- paste0(dic_draw()$hdType, collapse = "-")
@@ -246,12 +252,13 @@ server <- function(input, output, session) {
   })
 
   lftl_viz <- reactive({
+    # browser()
     geotype <- gsub("-", "", ftype_draw())
     print(geotype)
     viz <- paste0("lflt_", actual_but$active_map, "_", geotype)
     # opts <- c(opts_viz(), theme_draw())
     data <- data_draw()
-    if(is.null(data)){
+    if(is.null(data) | dic_draw()$label == "Actions total"){
       data <- df %>% select(Country)
     } else {
       data <- cbind(df %>% select(Country), data)
