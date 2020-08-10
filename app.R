@@ -269,7 +269,9 @@ server <- function(input, output, session) {
     #                                   opts_viz(), theme = theme_draw()
     #
     # )))
-    viz <- do.call(viz_name(), c(list(data = data_draw()
+    viz <- do.call(viz_name(), c(list(data = data_draw(),
+                                      palette_colors = c("#3A3766", "#5964C6", "#B956A6", "#DF5C33", "#FCBB1C", "#F8DEAC", "#9DE2C5", "276151"),
+                                      na_color = "#EAEAEA"
 
     )))
     viz
@@ -292,15 +294,20 @@ server <- function(input, output, session) {
     data <- data_draw()
     if(is.null(data) | dic_draw()$label == "Actions total"){
       data <- df %>% group_by(Country.code, Country) %>% summarise(Actions = n()) %>% select(Country.code, Actions, Country)
-      opts <- dsvizopts::merge_dsviz_options(map_color_scale = "Custom",
-                                             map_cutoff_points = c(10, 25, 50, 100),
-                                             tooltip = "<b>Country:</b> {Country}<br/><b>Actions:</b> {Actions}",
+      opts <- dsvizopts::merge_dsviz_options(tooltip = "<b>Country:</b> {Country}<br/><b>Actions:</b> {Actions}",
+                                             palette_colors = c("#FFDD65", "#F9BE58", "#F29F4B", "#E97F3F", "#DF5C33"),
+                                             na_color = "#EAEAEA",
+                                             # map_color_scale = "Custom",
+                                             # map_cutoff_points = c(10, 25, 50, 100),
                                              border_weight = 0.75)
     } else {
       req(input$selected_cat)
       data <- cbind(df %>% select(Country.code, Country), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
         group_by(Country.code, Country) %>% summarise(Count = n()) %>% select(Country.code, Count, Country)
-      opts <- dsvizopts::merge_dsviz_options(tooltip = "<b>Country:</b> {Country}<br/><b>Count:</b> {Count}")
+      opts <- dsvizopts::merge_dsviz_options(tooltip = "<b>Country:</b> {Country}<br/><b>Count:</b> {Count}",
+                                             palette_colors = c("#FFDD65", "#F9BE58", "#F29F4B", "#E97F3F", "#DF5C33"),
+                                             na_color = "#EAEAEA",
+                                             border_weight = 0.75)
     }
     do.call(viz, c(list(data = data, opts = opts
     ))
