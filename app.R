@@ -16,14 +16,57 @@ library(hgchmagic)
 frtypes_doc_viz <- suppressWarnings(yaml::read_yaml("conf/frtypes_viz.yaml"))
 frtypes_doc_map <- suppressWarnings(yaml::read_yaml("conf/frtypes_map.yaml"))
 
+# custom css styles
+styles <- "
+#panel_data {
+    border-top: 2px solid #276151 !important;
+}
+
+#panel_data .panel-header-title.text-malibu
+{
+ color: #276151;
+}
+
+#panel_data .panel-header-dismiss {
+ color: #276151;
+}
+
+#panel_viz {
+  border-top: 2px solid #293845  !important;
+}
+
+#panel_viz .panel-header-title.text-malibu
+{
+ color: #293845;
+}
+
+.control-label {
+ color: #df5c33;
+}
+
+.shiny-html-output.shiny-bound-output {
+ color: #df5c33;
+}
+
+img {
+ color: #df5c33 !important;
+}
+
+
+.dropdown-action-trigger {
+ background: #df5c33;
+}
+"
+
 # load data
 df <- readRDS("data/covid_mobility_actions.RDS")
 
 
 # Define UI for data download app ----
-ui <- panelsPage(panel(title = "Choose data",
+ui <- panelsPage(styles = styles,
+                 panel(id = "panel_data",
+                       title = "Choose data",
                        width = 200,
-                       color = "chardonnay",
                        body = div(
                          div(
                            uiOutput("choose_data"),
@@ -31,9 +74,9 @@ ui <- panelsPage(panel(title = "Choose data",
                            uiOutput("select_category")
                          )
                        )),
-                 panel(title = "Visualise data",
+                 panel(id = "panel_viz",
+                       title = "Visualise data",
                        title_plugin = uiOutput("download"),
-                       color = "chardonnay",
                        can_collapse = FALSE,
                        # body = withLoader(uiOutput("viz"),
                        #                   type = "image",
@@ -53,7 +96,7 @@ server <- function(input, output, session) {
   })
 
   output$choose_data <- renderUI({
-    selectInput("dataset", "Choose type of visualisation:",
+    selectInput("dataset", "Choose visualisation type:",
                 selected = "dat_map",
                 c("Explorative visualisation" = "dat_viz",
                   "Actions by geography" = "dat_map"))
@@ -71,7 +114,7 @@ server <- function(input, output, session) {
   output$select_category <- renderUI({
     if (input$dataset == "dat_viz" | dic_draw()$label == "Actions total") return ()
     selectInput("selected_cat",
-                div(class="title-data-select","Select the category:"),
+                div(class="title-data-select","Select category:"),
                 choices = data_draw() %>% pull() %>% unique())
   })
 
@@ -118,7 +161,7 @@ server <- function(input, output, session) {
                                     plugins= list('remove_button', 'drag_drop')))
     } else {
       selectInput("var_order",
-                     div(class="title-data-select","Select a variable to show on the map:"),
+                     div(class="title-data-select","Select variable:"),
                      choices = list_var)
     }
   })
@@ -201,7 +244,7 @@ server <- function(input, output, session) {
       active <- actual_but$active_map
     }
     buttonImageInput('viz_selection',
-                     "Viz type",
+                     "Visualisation type",
                      images = possible_viz(),
                      path = path,
                      format = 'svg',
