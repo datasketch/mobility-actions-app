@@ -251,7 +251,8 @@ server <- function(input, output, session) {
       data <- df %>% group_by(Country.code, Country) %>% summarise(Actions = n()) %>% select(Country.code, Actions, Country)
       opts <- dsvizopts::merge_dsviz_options(map_color_scale = "Custom",
                                              map_cutoff_points = c(10, 25, 50, 100),
-                                             tooltip = "<b>Country:</b> {Country}<br/><b>Actions:</b> {Actions}")
+                                             tooltip = "<b>Country:</b> {Country}<br/><b>Actions:</b> {Actions}",
+                                             border_weight = 0.75)
     } else {
       req(input$selected_cat)
       data <- cbind(df %>% select(Country.code, Country), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
