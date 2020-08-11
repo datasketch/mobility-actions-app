@@ -108,10 +108,10 @@ server <- function(input, output, session) {
       df %>% select(-Country, -Country.code, -Country.region)
     } else if (input$dataset == "dat_map"){
       df %>% rename(`Actions total` = Country.code) %>%
-        select(-Country, -Country.region, -`Date started`, -`Date announced`)
+        select(-Country, -Country.region, -`Date started`, -`Date announced`, -`Week started`, -`Week announced`)
     } else {
       df %>% filter(Country.code == "USA") %>% rename(`Actions total` = Country.region) %>%
-        select(-Country, -Country.code, -`Date started`, -`Date announced`)
+        select(-Country, -Country.code, -`Date started`, -`Date announced`, -`Week started`, -`Week announced`)
     }
   })
 
