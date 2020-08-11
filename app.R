@@ -99,15 +99,19 @@ server <- function(input, output, session) {
     selectInput("dataset", "Choose visualisation type:",
                 selected = "dat_map",
                 c("Explorative visualisation" = "dat_viz",
-                  "Actions by geography" = "dat_map"))
+                  "Actions by country" = "dat_map",
+                  "Actions by US state" = "dat_map_us"))
   })
 
   inputData <- reactive({
     req(input$dataset)
     if(input$dataset == "dat_viz"){
       df %>% select(-Country, -Country.code)
-    } else {
+    } else if (input$dataset == "dat_map"){
       df %>% rename(`Actions total` = Country.code) %>% select(-Country)
+    } else {
+      df %>% filter(Country.code == "USA") %>% rename(`Actions total` = Country.region) %>%
+        select(-Country, -Country.code)
     }
   })
 
@@ -188,17 +192,10 @@ server <- function(input, output, session) {
       if (is.null(dic_draw())) return()
       paste0(dic_draw()$hdType, collapse = "-")
     } else {
-      if (is.null(dic_draw())) {
-        x <- "GcdNum"
-      } else if (dic_draw()$label == "Actions total"){
+      if (input$dataset == "dat_map"){
         x <- "GcdNum"
       } else {
-        x <- paste0(dic_draw()$hdType, collapse = "-")
-        if (x == "Num") {
-          x <- "GcdNum"
-        } else if (x == "Cat"){
-          x <- "GcdNum"
-        }
+        x <- "GnmNum"
       }
       x
     }
@@ -293,22 +290,35 @@ server <- function(input, output, session) {
     # opts <- c(opts_viz(), theme_draw())
     data <- data_draw()
     if(is.null(data) | dic_draw()$label == "Actions total"){
-      data <- df %>% group_by(Country.code, Country) %>% summarise(Actions = n()) %>% select(Country.code, Actions, Country)
-      opts <- dsvizopts::merge_dsviz_options(tooltip = "<b>Country:</b> {Country}<br/><b>Actions:</b> {Actions}",
-                                             palette_colors = c("#FFDD65", "#F9BE58", "#F29F4B", "#E97F3F", "#DF5C33"),
-                                             na_color = "#EAEAEA",
-                                             # map_color_scale = "Custom",
-                                             # map_cutoff_points = c(10, 25, 50, 100),
-                                             border_weight = 0.75)
+      if (input$dataset == "dat_map_us"){
+        data <- df %>% filter(Country.code == "USA") %>% group_by(Country.region) %>% summarise(Actions = n()) %>% select(Country.region, Actions)
+        tooltip <- "<b>State:</b> {Country.region}<br/><b>Actions:</b> {Actions}"
+        map_name <- "usa_states"
+      } else if (input$dataset == "dat_map"){
+        data <- df %>% group_by(Country.code, Country) %>% summarise(Actions = n()) %>% select(Country.code, Actions, Country)
+        tooltip <- "<b>Country:</b> {Country}<br/><b>Actions:</b> {Actions}"
+        map_name <- "world_countries"
+      }
     } else {
       req(input$selected_cat)
-      data <- cbind(df %>% select(Country.code, Country), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
-        group_by(Country.code, Country) %>% summarise(Count = n()) %>% select(Country.code, Count, Country)
-      opts <- dsvizopts::merge_dsviz_options(tooltip = "<b>Country:</b> {Country}<br/><b>Count:</b> {Count}",
-                                             palette_colors = c("#FFDD65", "#F9BE58", "#F29F4B", "#E97F3F", "#DF5C33"),
-                                             na_color = "#EAEAEA",
-                                             border_weight = 0.75)
+      if (input$dataset == "dat_map_us"){
+        data <- cbind(df %>% filter(Country.code == "USA") %>% select(Country.region), data) %>%
+          filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
+          group_by(Country.region) %>% summarise(Count = n()) %>% select(Country.region, Count)
+        tooltip <- "<b>State:</b> {Country.region}<br/><b>Count:</b> {Count}"
+        map_name <- "usa_states"
+      } else if (input$dataset == "dat_map"){
+        data <- cbind(df %>% select(Country.code, Country), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
+          group_by(Country.code, Country) %>% summarise(Count = n()) %>% select(Country.code, Count, Country)
+        tooltip <- "<b>Country:</b> {Country}<br/><b>Count:</b> {Count}"
+        map_name <- "world_countries"
+      }
     }
+    opts <- dsvizopts::merge_dsviz_options(map_name = map_name,
+                                           tooltip = tooltip,
+                                           palette_colors = c("#FFDD65", "#F9BE58", "#F29F4B", "#E97F3F", "#DF5C33"),
+                                           na_color = "#EAEAEA",
+                                           border_weight = 0.75)
     do.call(viz, c(list(data = data, opts = opts
     ))
     )
