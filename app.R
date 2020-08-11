@@ -106,12 +106,13 @@ server <- function(input, output, session) {
   inputData <- reactive({
     req(input$dataset)
     if(input$dataset == "dat_viz"){
-      df %>% select(-Country, -Country.code)
+      df %>% select(-Country, -Country.code, -Country.region)
     } else if (input$dataset == "dat_map"){
-      df %>% rename(`Actions total` = Country.code) %>% select(-Country)
+      df %>% rename(`Actions total` = Country.code) %>%
+        select(-Country, -Country.region, -`Date started`, -`Date announced`)
     } else {
       df %>% filter(Country.code == "USA") %>% rename(`Actions total` = Country.region) %>%
-        select(-Country, -Country.code)
+        select(-Country, -Country.code, -`Date started`, -`Date announced`)
     }
   })
 
@@ -266,7 +267,14 @@ server <- function(input, output, session) {
     #                                   opts_viz(), theme = theme_draw()
     #
     # )))
-    viz <- do.call(viz_name(), c(list(data = data_draw(),
+    # browser()
+    data <- data_draw()
+    viz_name <- viz_name()
+    # if(viz_name == "hgch_line_DatCat"){
+    #   data <- data_draw()[, c(2, 1)]
+    #   viz_name == "hgch_line_CatDat"
+    # }
+    viz <- do.call(viz_name, c(list(data = data,
                                       palette_colors = c("#3A3766", "#5964C6", "#B956A6", "#DF5C33", "#FCBB1C", "#F8DEAC", "#9DE2C5", "276151"),
                                       na_color = "#EAEAEA"
 
