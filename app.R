@@ -243,6 +243,7 @@ server <- function(input, output, session) {
     buttonImageInput('viz_selection',
                      "Visualisation type",
                      images = possible_viz(),
+                     checkmarkColor = "orange",
                      path = path,
                      format = 'svg',
                      active = active)
