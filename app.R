@@ -286,12 +286,17 @@ server <- function(input, output, session) {
   })
 
   lftl_viz <- reactive({
-    # browser()
     geotype <- gsub("-", "", ftype_draw())
     print(geotype)
     viz <- paste0("lflt_", actual_but$active_map, "_", geotype)
     # opts <- c(opts_viz(), theme_draw())
     data <- data_draw()
+
+    palette_colors <- c("#FFDD65", "#F9BE58", "#F29F4B", "#E97F3F", "#DF5C33")
+    if(actual_but$active_map == "bubbles"){
+      palette_colors <- "#df5c33"
+    }
+
     if(is.null(data) | dic_draw()$label == "Actions total"){
       if (input$dataset == "dat_map_us"){
         data <- df %>% filter(Country.code == "USA") %>% group_by(Country.region) %>% summarise(Actions = n()) %>% select(Country.region, Actions)
@@ -319,7 +324,7 @@ server <- function(input, output, session) {
     }
     opts <- dsvizopts::merge_dsviz_options(map_name = map_name,
                                            tooltip = tooltip,
-                                           palette_colors = c("#FFDD65", "#F9BE58", "#F29F4B", "#E97F3F", "#DF5C33"),
+                                           palette_colors = palette_colors,
                                            na_color = "#EAEAEA",
                                            border_weight = 0.75)
     do.call(viz, c(list(data = data, opts = opts
