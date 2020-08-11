@@ -48,10 +48,9 @@ styles <- "
  color: #df5c33;
 }
 
-img {
- color: #df5c33 !important;
+.buttons-group .button-style.active-btn {
+ background-color: #df5c33 !important;
 }
-
 
 .dropdown-action-trigger {
  background: #df5c33;
@@ -267,13 +266,8 @@ server <- function(input, output, session) {
     #                                   opts_viz(), theme = theme_draw()
     #
     # )))
-    # browser()
     data <- data_draw()
     viz_name <- viz_name()
-    # if(viz_name == "hgch_line_DatCat"){
-    #   data <- data_draw()[, c(2, 1)]
-    #   viz_name == "hgch_line_CatDat"
-    # }
     viz <- do.call(viz_name, c(list(data = data,
                                       palette_colors = c("#3A3766", "#5964C6", "#B956A6", "#DF5C33", "#FCBB1C", "#F8DEAC", "#9DE2C5", "276151"),
                                       na_color = "#EAEAEA"
