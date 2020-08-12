@@ -83,7 +83,7 @@ ui <- panelsPage(styles = styles,
                          )
                        )),
                  panel(id = "panel_viz",
-                       title = "Visualise data",
+                       title = "Visualize data",
                        title_plugin = uiOutput("download"),
                        can_collapse = FALSE,
                        # body = withLoader(uiOutput("viz"),
@@ -104,9 +104,9 @@ server <- function(input, output, session) {
   })
 
   output$choose_data <- renderUI({
-    selectInput("dataset", "Choose visualisation type:",
+    selectInput("dataset", "Choose visualization type:",
                 selected = "dat_map",
-                c("Explorative visualisation" = "dat_viz",
+                c("Explorative visualization" = "dat_viz",
                   "Actions by country" = "dat_map",
                   "Actions by US state" = "dat_map_us"))
   })
@@ -250,7 +250,7 @@ server <- function(input, output, session) {
       active <- actual_but$active_map
     }
     buttonImageInput('viz_selection',
-                     "Visualisation type",
+                     "Visualization type",
                      images = possible_viz(),
                      checkmarkColor = "orange",
                      path = path,
