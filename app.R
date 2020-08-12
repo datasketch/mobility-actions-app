@@ -64,6 +64,10 @@ styles <- "
  background-color: #8097a4 !important;
 }
 
+.buttons-group .button-container {
+ height: 45px;
+}
+
 .dropdown-action-trigger {
  background: #df5c33;
 }
