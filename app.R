@@ -369,21 +369,19 @@ server <- function(input, output, session) {
   })
 
   output$download <- renderUI({
-    downloadImageUI("download_plot", dropdownLabel = "Download", formats = c("html","jpeg", "pdf", "png"), display = "dropdown")
+      downloadImageUI("download_plot", dropdownLabel = "Download", formats = c("html","jpeg", "pdf", "png"), display = "dropdown")
   })
 
   download_opts <- reactive({
     if(input$dataset == "dat_viz"){
-      list(graph = hgch_viz(),
-           lib = "highcharter")
+      hgch_viz()
     } else {
-      list(graph = lftl_viz(),
-           lib = "highcharter")
+      lftl_viz()
     }
   })
 
-  callModule(downloadImage, "download_plot", graph = download_opts()$graph,
-             lib = download_opts()$lib, formats = c("html","jpeg", "pdf", "png"))
+  callModule(downloadImage, "download_plot", graph = download_opts(),
+             lib = "highcharter", formats = c("html","jpeg", "pdf", "png"))
 
 }
 
