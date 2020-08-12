@@ -56,6 +56,10 @@ styles <- "
  background: #df5c33;
 }
 
+.dropdown-action-trigger:hover {
+ background-color:  #c14c2d
+}
+
 #panel_viz_body {
  height: 400px !important;
 }
