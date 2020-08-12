@@ -40,6 +40,10 @@ styles <- "
  color: #293845;
 }
 
+#panel_viz_body {
+ height: 400px !important;
+}
+
 .control-label {
  color: #df5c33;
 }
@@ -52,16 +56,24 @@ styles <- "
  background-color: #df5c33 !important;
 }
 
+.buttons-group .button-style.active-btn:hover {
+ background-color: #c14c2d !important;
+}
+
+.buttons-group .button-style {
+ background-color: #bdcad1 !important;
+}
+
+.buttons-group .button-style:hover {
+ background-color: #8097a4 !important;
+}
+
 .dropdown-action-trigger {
  background: #df5c33;
 }
 
 .dropdown-action-trigger:hover {
  background-color:  #c14c2d
-}
-
-#panel_viz_body {
- height: 400px !important;
 }
 "
 
