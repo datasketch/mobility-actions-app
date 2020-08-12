@@ -55,6 +55,10 @@ styles <- "
 .dropdown-action-trigger {
  background: #df5c33;
 }
+
+#panel_viz_body {
+ height: 400px !important;
+}
 "
 
 # load data
