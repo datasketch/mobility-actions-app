@@ -40,10 +40,6 @@ styles <- "
  color: #293845;
 }
 
-#panel_viz_body {
- height: 400px !important;
-}
-
 .control-label {
  color: #df5c33;
 }
@@ -76,6 +72,13 @@ styles <- "
  background-color:  #c14c2d
 }
 "
+# #view_hgch_viz {
+# height: 600px !important;
+# }
+#
+# .highcharts-plot-background {
+#   height: 400px !important;
+# }
 
 # load data
 df <- readRDS("data/covid_mobility_actions.RDS")
@@ -129,10 +132,10 @@ server <- function(input, output, session) {
       df %>% select(-Country, -Country.code, -Country.region)
     } else if (input$dataset == "dat_map"){
       df %>% rename(`Actions total` = Country.code) %>%
-        select(-Country, -Country.region, -`Date started`, -`Date announced`, -`Week started`, -`Week announced`)
+        select(-Country, -Country.region, -`Date started`, -`Date announced`, -`Week started`, -`Week announced`, -`World region`)
     } else {
       df %>% filter(Country.code == "USA") %>% rename(`Actions total` = Country.region) %>%
-        select(-Country, -Country.code, -`Date started`, -`Date announced`, -`Week started`, -`Week announced`)
+        select(-Country, -Country.code, -`Date started`, -`Date announced`, -`Week started`, -`Week announced`, -`World region`)
     }
   })
 
