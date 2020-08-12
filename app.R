@@ -93,7 +93,7 @@ caption <- paste0("<p style='font-family:Ubuntu;color:#293845;font-size:12px;'>"
 ui <- panelsPage(styles = styles,
                  panel(id = "panel_data",
                        title = "Choose data",
-                       width = 200,
+                       width = 250,
                        body = div(
                          div(
                            uiOutput("choose_data"),
@@ -272,7 +272,7 @@ server <- function(input, output, session) {
     buttonImageInput('viz_selection',
                      "Visualization type",
                      images = possible_viz(),
-                     checkmarkColor = "orange",
+                     checkmarkColor = "#df5c33",
                      path = path,
                      format = 'svg',
                      active = active)
