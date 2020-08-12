@@ -302,9 +302,13 @@ server <- function(input, output, session) {
     opts <- dsvizopts::merge_dsviz_options(palette_colors = c("#3A3766", "#5964C6", "#B956A6", "#DF5C33", "#FCBB1C", "#F8DEAC", "#9DE2C5", "276151"),
                                            na_color = "#EAEAEA",
                                            caption = caption,
+                                           legend_position = "top",
                                            dataLabels_show = dataLabels_show)
     viz <- do.call(viz_name, c(list(data = data, opts = opts
     )))
+    if(nrow(dic_draw()) == 2){
+      viz <- viz %>% hc_legend(verticalAlign = "top")
+    }
     viz
   })
 
