@@ -290,9 +290,14 @@ server <- function(input, output, session) {
     # )))
     data <- data_draw()
     viz_name <- viz_name()
+    dataLabels_show <- FALSE
+    if(actual_but$active_viz %in% c("treemap", "bubbles")){
+      dataLabels_show <- TRUE
+    }
     opts <- dsvizopts::merge_dsviz_options(palette_colors = c("#3A3766", "#5964C6", "#B956A6", "#DF5C33", "#FCBB1C", "#F8DEAC", "#9DE2C5", "276151"),
                                            na_color = "#EAEAEA",
-                                           caption = caption)
+                                           caption = caption,
+                                           dataLabels_show = dataLabels_show)
     viz <- do.call(viz_name, c(list(data = data, opts = opts
     )))
     viz
