@@ -388,7 +388,7 @@ server <- function(input, output, session) {
     }
   })
 
-  callModule(downloadImage, "download_plot", graph = download_opts(),
+  callModule(downloadImage, "download_plot", graph = reactive(download_opts()),
              lib = "highcharter", formats = c("html","jpeg", "pdf", "png"))
 
 }
