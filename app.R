@@ -198,16 +198,17 @@ server <- function(input, output, session) {
 
   data_draw <- reactive({
     var_select <- input$var_order
+    dic <- dic_draw()
     if (is.null(var_select)) return()
     d <- data_load()[var_select]
-    names(d) <- dic_draw()$label
+    names(d) <- dic$label
     d
   })
 
   dic_draw <- reactive({
     var_select <- input$var_order
     if (is.null(var_select)) return()
-    dic_load() %>% filter(id %in% var_select)
+    dic_load()[match(input$var_order, dic_load()$id),]
   })
 
   ftype_draw <- reactive({
@@ -291,6 +292,7 @@ server <- function(input, output, session) {
     #                                   opts_viz(), theme = theme_draw()
     #
     # )))
+    # browser()
     data <- data_draw()
     viz_name <- viz_name()
     dataLabels_show <- FALSE
@@ -355,8 +357,8 @@ server <- function(input, output, session) {
                                            tooltip = tooltip,
                                            palette_colors = palette_colors,
                                            na_color = "#EAEAEA",
-                                           border_weight = 0.75,
-                                           caption = caption)
+                                           caption = caption,
+                                           border_weight = 0.75)
     do.call(viz, c(list(data = data, opts = opts
     ))
     )
