@@ -59,7 +59,8 @@ styles <- "
 
 # load data
 df <- readRDS("data/covid_mobility_actions.RDS")
-
+sources <- "Sources: Mobility Actions Database. Combs, T. Streetplans. NUMO Mobility Works. Full citation details at bit.ly/mobility-actions"
+caption <- paste0("<p style='font-family:Ubuntu;color:#293845;font-size:12px;'>",sources,"</p>")
 
 # Define UI for data download app ----
 ui <- panelsPage(styles = styles,
@@ -269,10 +270,10 @@ server <- function(input, output, session) {
     # )))
     data <- data_draw()
     viz_name <- viz_name()
-    viz <- do.call(viz_name, c(list(data = data,
-                                      palette_colors = c("#3A3766", "#5964C6", "#B956A6", "#DF5C33", "#FCBB1C", "#F8DEAC", "#9DE2C5", "276151"),
-                                      na_color = "#EAEAEA"
-
+    opts <- dsvizopts::merge_dsviz_options(palette_colors = c("#3A3766", "#5964C6", "#B956A6", "#DF5C33", "#FCBB1C", "#F8DEAC", "#9DE2C5", "276151"),
+                                           na_color = "#EAEAEA",
+                                           caption = caption)
+    viz <- do.call(viz_name, c(list(data = data, opts = opts
     )))
     viz
   })
@@ -326,7 +327,8 @@ server <- function(input, output, session) {
                                            tooltip = tooltip,
                                            palette_colors = palette_colors,
                                            na_color = "#EAEAEA",
-                                           border_weight = 0.75)
+                                           border_weight = 0.75,
+                                           caption = caption)
     do.call(viz, c(list(data = data, opts = opts
     ))
     )
