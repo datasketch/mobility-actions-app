@@ -79,7 +79,23 @@ styles <- "
 }
 
 .legend {
-  width: 90px !important;
+  width: 85px !important;
+}
+
+#viewAllData.btn {
+ background: #df5c33;
+}
+
+#viewAllData.btn:hover {
+ background: #c14c2d;
+}
+
+#downloadCSV.btn {
+ background: #df5c33;
+}
+
+#downloadCSV.btn:hover {
+ background: #c14c2d;
 }
 
 "
@@ -87,8 +103,10 @@ styles <- "
 
 # load data
 df <- readRDS("data/covid_mobility_actions.RDS")
+country_lookup <- df %>% distinct(Country, Country.code)
 sources <- "Sources: Mobility Actions Database. Combs, T. Streetplans. NUMO Mobility Works. Full citation details at bit.ly/mobility-actions"
 caption <- paste0("<p style='font-family:Ubuntu;color:#293845;font-size:12px;'>",sources,"</p>")
+data_link <- "https://docs.google.com/spreadsheets/d/1T8LE4p0-L96xiVtHsqARHiLsHsFwS8oQAT1Y2KteMXc/"
 
 # Define UI for data download app ----
 ui <- panelsPage(styles = styles,
@@ -99,7 +117,11 @@ ui <- panelsPage(styles = styles,
                          div(
                            uiOutput("choose_data"),
                            uiOutput("select_var"),
-                           uiOutput("select_category")
+                           uiOutput("select_category"),
+                           actionButton(inputId='viewAllData', label="View complete dataset",
+                                        icon = icon("th"),
+                                        onclick = paste0("window.open('",data_link,"', '_blank')")),
+                           downloadButton("downloadCSV", "Download current selection")
                          )
                        )),
                  panel(id = "panel_viz",
@@ -137,10 +159,10 @@ server <- function(input, output, session) {
       df %>% select(-Country, -Country.code, -Country.region)
     } else if (input$dataset == "dat_map"){
       df %>% rename(`Actions total` = Country.code) %>%
-        select(-Country, -Country.region, -`Date started`, -`Date announced`, -`Week started`, -`Week announced`, -`World region`)
+        select(-Country, -Country.region, -`Date started`, -`Date announced`, -`Week started`, -`Week announced`, -`World region`, -`World country`)
     } else {
       df %>% filter(Country.code == "USA") %>% rename(`Actions total` = Country.region) %>%
-        select(-Country, -Country.code, -`Date started`, -`Date announced`, -`Week started`, -`Week announced`, -`World region`)
+        select(-Country, -Country.code, -`Date started`, -`Date announced`, -`Week started`, -`Week announced`, -`World region`, -`World country`)
     }
   })
 
@@ -208,6 +230,27 @@ server <- function(input, output, session) {
     d <- data_load()[var_select]
     names(d) <- dic$label
     d
+  })
+
+  data_draw_map <- reactive({
+    data <- data_draw()
+    if(is.null(data) | dic_draw()$label == "Actions total"){
+      if (input$dataset == "dat_map_us"){
+        data <- df %>% filter(Country.code == "USA") %>% group_by(Country.region) %>% summarise(Actions = n()) %>% select(Country.region, Actions)
+      } else if (input$dataset == "dat_map"){
+        data <- df %>% group_by(Country.code, Country) %>% summarise(Actions = n()) %>% select(Country.code, Actions, Country)
+      }
+    } else {
+      req(input$selected_cat)
+      if (input$dataset == "dat_map_us"){
+        data <- cbind(df %>% filter(Country.code == "USA") %>% select(Country.region), data) %>%
+          filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
+          group_by(Country.region) %>% summarise(Count = n()) %>% select(Country.region, Count)
+      } else if (input$dataset == "dat_map"){
+        data <- cbind(df %>% select(Country.code, Country), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
+          group_by(Country.code, Country) %>% summarise(Count = n()) %>% select(Country.code, Count, Country)
+      }}
+    data
   })
 
   dic_draw <- reactive({
@@ -330,7 +373,6 @@ server <- function(input, output, session) {
     print(geotype)
     viz <- paste0("lflt_", actual_but$active_map, "_", geotype)
     # opts <- c(opts_viz(), theme_draw())
-    data <- data_draw()
 
     palette_colors <- c("#FFDD65", "#F9BE58", "#F29F4B", "#E97F3F", "#DF5C33")
     if(actual_but$active_map == "bubbles"){
@@ -339,25 +381,18 @@ server <- function(input, output, session) {
 
     if(is.null(data) | dic_draw()$label == "Actions total"){
       if (input$dataset == "dat_map_us"){
-        data <- df %>% filter(Country.code == "USA") %>% group_by(Country.region) %>% summarise(Actions = n()) %>% select(Country.region, Actions)
         tooltip <- "<b>State:</b> {Country.region}<br/><b>Actions:</b> {Actions}"
         map_name <- "usa_states"
       } else if (input$dataset == "dat_map"){
-        data <- df %>% group_by(Country.code, Country) %>% summarise(Actions = n()) %>% select(Country.code, Actions, Country)
         tooltip <- "<b>Country:</b> {Country}<br/><b>Actions:</b> {Actions}"
         map_name <- "world_countries"
       }
     } else {
       req(input$selected_cat)
       if (input$dataset == "dat_map_us"){
-        data <- cbind(df %>% filter(Country.code == "USA") %>% select(Country.region), data) %>%
-          filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
-          group_by(Country.region) %>% summarise(Count = n()) %>% select(Country.region, Count)
         tooltip <- "<b>State:</b> {Country.region}<br/><b>Count:</b> {Count}"
         map_name <- "usa_states"
       } else if (input$dataset == "dat_map"){
-        data <- cbind(df %>% select(Country.code, Country), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
-          group_by(Country.code, Country) %>% summarise(Count = n()) %>% select(Country.code, Count, Country)
         tooltip <- "<b>Country:</b> {Country}<br/><b>Count:</b> {Count}"
         map_name <- "world_countries"
       }
@@ -368,7 +403,7 @@ server <- function(input, output, session) {
                                            na_color = "#EAEAEA",
                                            caption = caption,
                                            border_weight = 0.75)
-    do.call(viz, c(list(data = data, opts = opts
+    do.call(viz, c(list(data = data_draw_map(), opts = opts
     ))
     )
   })
@@ -391,6 +426,41 @@ server <- function(input, output, session) {
 
   callModule(downloadImage, "download_plot", graph = reactive(download_opts()),
              lib = "highcharter", formats = c("html","jpeg", "pdf", "png"))
+
+
+  data_download <- reactive({
+    dd <- data_draw() %>% group_by_all() %>% summarise(Count = n())
+    if(input$dataset == "dat_map"){
+      if(is.null(data) | dic_draw()$label == "Actions total"){
+        dd <- data_draw_map() %>% ungroup() %>% select(Country, Actions)
+      } else {
+        req(input$selected_cat)
+        dd <- data_draw_map() %>% ungroup() %>% select(Country, Count)
+        names(dd) <- c("Country", input$selected_cat)
+      }
+    }
+    if(input$dataset == "dat_map_us"){
+      if(is.null(data) | dic_draw()$label == "Actions total"){
+        dd <- data_draw_map() %>% ungroup() %>% select(State = Country.region, Actions)
+      } else {
+        req(input$selected_cat)
+        dd <- data_draw_map() %>% ungroup() %>% select(State = Country.region, Count)
+        names(dd) <- c("State", input$selected_cat)
+      }
+    }
+    dd
+  })
+
+  #download csv of selected data displayed in viz
+  output$downloadCSV <- downloadHandler(
+
+    filename = function() {
+      paste("covid_mobility_actions_", input$var_order, ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(data_download(), file, row.names = FALSE)
+    }
+  )
 
 }
 
