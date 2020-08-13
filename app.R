@@ -75,16 +75,15 @@ styles <- "
 }
 
 .dropdown-action-trigger:hover {
- background-color:  #c14c2d
+ background-color:  #c14c2d;
 }
+
+.legend {
+  width: 90px !important;
+}
+
 "
-# #view_hgch_viz {
-# height: 600px !important;
-# }
-#
-# .highcharts-plot-background {
-#   height: 400px !important;
-# }
+
 
 # load data
 df <- readRDS("data/covid_mobility_actions.RDS")
