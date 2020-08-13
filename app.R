@@ -13,6 +13,8 @@ library(hotr)
 library(homodatum)
 library(hgchmagic)
 
+webshot::install_phantomjs()
+
 frtypes_doc_viz <- suppressWarnings(yaml::read_yaml("conf/frtypes_viz.yaml"))
 frtypes_doc_map <- suppressWarnings(yaml::read_yaml("conf/frtypes_map.yaml"))
 
