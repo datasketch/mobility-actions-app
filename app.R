@@ -150,19 +150,29 @@ server <- function(input, output, session) {
                 selected = "dat_map",
                 c("Explorative visualization" = "dat_viz",
                   "Actions by country" = "dat_map",
-                  "Actions by US state" = "dat_map_us"))
+                  "Actions by US state" = "dat_map_us",
+                  "Actions by city" = "dat_map_city"))
   })
 
   inputData <- reactive({
     req(input$dataset)
     if(input$dataset == "dat_viz"){
-      df %>% select(-Country, -Country.code, -Country.region)
+      df %>% select(-Country, -Country.code, -Country.region, -City, -lon, -lat)
     } else if (input$dataset == "dat_map"){
       df %>% rename(`Actions total` = Country.code) %>%
-        select(-Country, -Country.region, -`Date started`, -`Date announced`, -`Week started`, -`Week announced`, -`World region`, -`World country`)
-    } else {
+        select(-Country, -Country.region, -`Date started`, -`Date announced`,
+               -`Week started`, -`Week announced`,
+               -`World region`, -`World country`, -City, -lon, -lat)
+    } else if (input$dataset == "dat_map_us") {
       df %>% filter(Country.code == "USA") %>% rename(`Actions total` = Country.region) %>%
-        select(-Country, -Country.code, -`Date started`, -`Date announced`, -`Week started`, -`Week announced`, -`World region`, -`World country`)
+        select(-Country, -Country.code, -`Date started`, -`Date announced`,
+               -`Week started`, -`Week announced`,
+               -`World region`, -`World country`, -City, -lon, -lat)
+    } else {
+      df %>% rename(`Actions total` = City) %>%
+        select(-Country, -Country.region, -Country.code, -`Date started`, -`Date announced`,
+               -`Week started`, -`Week announced`,
+               -`World region`, -`World country`, -lon, -lat)
     }
   })
 
@@ -217,7 +227,8 @@ server <- function(input, output, session) {
     } else {
       selectInput("var_order",
                      div(class="title-data-select","Select variable:"),
-                     choices = list_var)
+                     choices = list_var,
+                  selected = "actions_total")
     }
   })
 
@@ -239,6 +250,8 @@ server <- function(input, output, session) {
         data <- df %>% filter(Country.code == "USA") %>% group_by(Country.region) %>% summarise(Actions = n()) %>% select(Country.region, Actions)
       } else if (input$dataset == "dat_map"){
         data <- df %>% group_by(Country.code, Country) %>% summarise(Actions = n()) %>% select(Country.code, Actions, Country)
+      } else if (input$dataset == "dat_map_city"){
+        data <- df %>% group_by(lon, lat, City) %>% summarise(Actions = n()) %>% select(lon, lat, Actions, City)
       }
     } else {
       req(input$selected_cat)
@@ -249,7 +262,12 @@ server <- function(input, output, session) {
       } else if (input$dataset == "dat_map"){
         data <- cbind(df %>% select(Country.code, Country), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
           group_by(Country.code, Country) %>% summarise(Count = n()) %>% select(Country.code, Count, Country)
-      }}
+      } else if (input$dataset == "dat_map_city"){
+        data <- cbind(df %>% select(City, lon, lat), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
+          group_by(lon, lat, City) %>% summarise(Count = n()) %>% select(lon, lat, Count, City)
+      }
+
+      }
     data
   })
 
@@ -267,8 +285,10 @@ server <- function(input, output, session) {
     } else {
       if (input$dataset == "dat_map"){
         x <- "GcdNum"
-      } else {
+      } else if (input$dataset == "dat_map_us"){
         x <- "GnmNum"
+      } else {
+        x <- "GlnGltNum"
       }
       x
     }
@@ -379,6 +399,8 @@ server <- function(input, output, session) {
       palette_colors <- "#df5c33"
     }
 
+    legend_show = TRUE
+
     if(is.null(data) | dic_draw()$label == "Actions total"){
       if (input$dataset == "dat_map_us"){
         tooltip <- "<b>State:</b> {Country.region}<br/><b>Actions:</b> {Actions}"
@@ -386,6 +408,10 @@ server <- function(input, output, session) {
       } else if (input$dataset == "dat_map"){
         tooltip <- "<b>Country:</b> {Country}<br/><b>Actions:</b> {Actions}"
         map_name <- "world_countries"
+      } else {
+        tooltip <- "<b>City:</b> {City}<br/><b>Actions:</b> {Actions}"
+        map_name <- "world_countries"
+        legend_show <- FALSE
       }
     } else {
       req(input$selected_cat)
@@ -395,11 +421,16 @@ server <- function(input, output, session) {
       } else if (input$dataset == "dat_map"){
         tooltip <- "<b>Country:</b> {Country}<br/><b>Count:</b> {Count}"
         map_name <- "world_countries"
+      } else {
+        tooltip <- "<b>City:</b> {City}<br/><b>Count:</b> {Count}"
+        map_name <- "world_countries"
+        legend_show <- FALSE
       }
     }
     opts <- dsvizopts::merge_dsviz_options(map_name = map_name,
                                            tooltip = tooltip,
                                            palette_colors = palette_colors,
+                                           legend_show = legend_show,
                                            na_color = "#EAEAEA",
                                            caption = caption,
                                            border_weight = 0.75)
@@ -446,6 +477,15 @@ server <- function(input, output, session) {
         req(input$selected_cat)
         dd <- data_draw_map() %>% ungroup() %>% select(State = Country.region, Count)
         names(dd) <- c("State", input$selected_cat)
+      }
+    }
+    if(input$dataset == "dat_map_city"){
+      if(is.null(data) | dic_draw()$label == "Actions total"){
+        dd <- data_draw_map() %>% ungroup() %>% select(City, Actions)
+      } else {
+        req(input$selected_cat)
+        dd <- data_draw_map() %>% ungroup() %>% select(City, Count)
+        names(dd) <- c("City", input$selected_cat)
       }
     }
     dd
