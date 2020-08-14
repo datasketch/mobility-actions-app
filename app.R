@@ -42,8 +42,14 @@ styles <- "
  color: #293845;
 }
 
+
 .control-label {
  color: #df5c33;
+ font-weight: 700;
+}
+
+.title-data-select {
+ color: #df5c33 !important;
 }
 
 .shiny-html-output.shiny-bound-output {
@@ -143,7 +149,7 @@ server <- function(input, output, session) {
 
   output$viz <- renderUI({
     if(input$dataset == "dat_viz"){
-      highchartOutput("view_hgch_viz", height = 500)
+      highchartOutput("view_hgch_viz", height = 400)
     } else {
       leafletOutput("map_lflt")
     }
@@ -169,12 +175,12 @@ server <- function(input, output, session) {
   })
 
   output$choose_data <- renderUI({
-    selectInput("dataset", "Choose visualization type:",
+    selectInput("dataset", "CHOOSE VISUALIZATION TYPE:",
                 selected = "dat_map",
-                c("Explorative visualization" = "dat_viz",
-                  "Actions by country" = "dat_map",
-                  "Actions by US state" = "dat_map_us",
-                  "Actions by city" = "dat_map_city"))
+                c("Explore Categories" = "dat_viz",
+                  "Actions by Country" = "dat_map",
+                  "Actions by US State" = "dat_map_us",
+                  "Actions by City" = "dat_map_city"))
   })
 
   inputData <- reactive({
