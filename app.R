@@ -84,6 +84,7 @@ styles <- "
 
 #viewAllData.btn {
  background: #df5c33;
+ margin-bottom: 10px;
 }
 
 #viewAllData.btn:hover {
@@ -113,7 +114,7 @@ data_link <- "https://docs.google.com/spreadsheets/d/1T8LE4p0-L96xiVtHsqARHiLsHs
 ui <- panelsPage(styles = styles,
                  panel(id = "panel_data",
                        title = "Choose data",
-                       width = 250,
+                       width = 270,
                        body = div(
                          div(
                            uiOutput("choose_data"),
@@ -384,6 +385,7 @@ server <- function(input, output, session) {
     # )))
     # browser()
     data <- data_draw()
+    print(names(data))
     viz_name <- viz_name()
     dataLabels_show <- FALSE
     if(actual_but$active_viz %in% c("treemap", "bubbles")){
@@ -392,13 +394,17 @@ server <- function(input, output, session) {
     opts <- dsvizopts::merge_dsviz_options(palette_colors = c("#3A3766", "#5964C6", "#B956A6", "#DF5C33", "#FCBB1C", "#F8DEAC", "#9DE2C5", "276151"),
                                            na_color = "#EAEAEA",
                                            caption = caption,
-                                           legend_position = "top",
+                                           label_wrap = 30,
+                                           #plot_margin_bottom = 150,
+                                           legend_y_position = 10,
+                                           legend_verticalAlign = 'top',
                                            dataLabels_show = dataLabels_show)
+    if ("Status" %in% names(data)) {
+      opts <- c(opts, plot_margin_bottom = 230)
+    }
     viz <- do.call(viz_name, c(list(data = data, opts = opts
     )))
-    if(nrow(dic_draw()) == 2){
-      viz <- viz %>% hc_legend(verticalAlign = "top")
-    }
+
     viz
   })
 
