@@ -103,6 +103,7 @@ styles <- "
 
 # load data
 df <- readRDS("data/covid_mobility_actions.RDS")
+df_dic <- readRDS("data/covid_mobility_actions_dictionary.RDS")
 country_lookup <- df %>% distinct(Country, Country.code)
 sources <- "Sources: Mobility Actions Database. Combs, T. Streetplans. NUMO Mobility Works. Full citation details at bit.ly/mobility-actions"
 caption <- paste0("<p style='font-family:Ubuntu;color:#293845;font-size:12px;'>",sources,"</p>")
@@ -122,6 +123,8 @@ ui <- panelsPage(styles = styles,
                                         icon = icon("th"),
                                         onclick = paste0("window.open('",data_link,"', '_blank')")),
                            downloadButton("downloadCSV", "Download current selection")
+                           # ,
+                           # uiOutput("dataDict")
                          )
                        )),
                  panel(id = "panel_viz",
@@ -143,6 +146,25 @@ server <- function(input, output, session) {
     } else {
       leafletOutput("map_lflt")
     }
+  })
+
+  # dataDictHover <- reactive({
+  #   if (is.null(input$var_order) | input$var_order == "actions_total") return ("")
+  #   if(length(input$var_order) == 1){
+  #   tags$div(tags$h6(df_dic %>% filter(id == input$var_order) %>% pull(label)),
+  #            tags$p(df_dic %>% filter(id == input$var_order) %>% pull(description))
+  #   )
+  #   } else if (length(input$var_order) == 2) {
+  #     tags$div(tags$h6(df_dic %>% filter(id == input$var_order[1]) %>% pull(label)),
+  #              tags$p(df_dic %>% filter(id == input$var_order[1]) %>% pull(description)),
+  #              tags$h6(df_dic %>% filter(id == input$var_order[2]) %>% pull(label)),
+  #              tags$p(df_dic %>% filter(id == input$var_order[2]) %>% pull(description)))
+  #   }
+  # })
+
+  output$dataDict <- renderUI({
+    if (is.null(input$var_order) | input$var_order == "actions_total") return ()
+    tags$div(tags$h5(infoTooltip("Data dictionary", dataDictHover())))
   })
 
   output$choose_data <- renderUI({
@@ -218,7 +240,7 @@ server <- function(input, output, session) {
 
     if(input$dataset == "dat_viz"){
       selectizeInput("var_order",
-                     div(class="title-data-select","Select up to two variables:"),
+                     div(class="title-data-select", "Select up to two variables:"),
                      choices = list_var,
                      selected = "action_types",
                      multiple = TRUE,
