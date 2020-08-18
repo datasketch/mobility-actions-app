@@ -84,10 +84,6 @@ styles <- "
  background-color:  #c14c2d;
 }
 
-.legend {
-  width: 85px !important;
-}
-
 #viewAllData.btn {
  background: #df5c33;
  margin-bottom: 10px;
