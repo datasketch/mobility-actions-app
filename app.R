@@ -177,10 +177,10 @@ server <- function(input, output, session) {
   output$choose_data <- renderUI({
     selectInput("dataset", "CHOOSE VISUALIZATION TYPE:",
                 selected = "dat_map",
-                c("Explore Categories" = "dat_viz",
-                  "Actions by Country" = "dat_map",
-                  "Actions by US State" = "dat_map_us",
-                  "Actions by City" = "dat_map_city"))
+                c("Graphs" = "dat_viz",
+                  "Maps by Country" = "dat_map",
+                  "Maps by US State" = "dat_map_us",
+                  "Maps by City" = "dat_map_city"))
   })
 
   inputData <- reactive({
