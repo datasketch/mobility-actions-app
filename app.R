@@ -3,6 +3,7 @@ library(shiny)
 library(dplyr)
 library(shinycustomloader)
 library(rgdal)
+library(googlesheets4)
 
 # load in ds packages
 library(dsmodules)
@@ -107,15 +108,135 @@ h4 {
 "
 
 
-# load data
-df <- readRDS("data/covid_mobility_actions.RDS")
-df_dic <- readRDS("data/covid_mobility_actions_dictionary.RDS")
-country_lookup <- df %>% distinct(Country, Country.code)
-sources <- "Sources of data: 'It wasn't so hard' Covid-19 mobility database. PBIC, NUMO, Mobility Works, Streetplans, EpiAndes, Datasketch (2020). Full citation details at bit.ly/mobility-actions"
-caption <- paste0("<p style='font-family:Ubuntu;color:#293845;font-size:12px;'>",sources,"</p>")
+### load data -----------------------------------------------------------------------------------
+
+## link to googlesheet
 data_link <- "https://docs.google.com/spreadsheets/d/1_rJoqel3UkhQ2j7H_CwDTo7-8Uom1Vv26lKVWo_1O6k/edit?ts=5f47b671#gid=789320453"
 
-# Define UI for data download app ----
+## load lookup tables
+# iso2 iso3 lookup
+lookup <- read.csv("data/lookup_iso2_iso3.csv") %>% select(Country.code = iso2, Country.code.iso3 = iso3)
+# us states lookup
+lookup_us_states <- read.csv("data/usa-states.csv") %>%
+  select(Country.region = name, us_state_id = id)
+# cities lookup
+df_cities_complete <- readRDS("data/clean_data_with_cities_long_lat.RDS")
+
+## load google sheets
+# load dataset
+df_read <- read_sheet(data_link)
+# load data dictionary
+df_read_dic <- read_sheet(data_link, sheet = "variable-dictionary")
+
+
+### format data -----------------------------------------------------------------------------------
+
+## format dictionary
+data_dic <- df_read_dic %>% select(Varlabel, Varname, Description = `Variable Description`)
+# varnames (format like column names in data sheet) --> NAMES CAN BE ADDED OR REMOVED HERE
+varnames <- data.frame(Varname = c("Country.code.iso3", "Country", "Country.region", "Master action types",
+                                   "Week.announced", "Week.started", "World.Region", "World country",
+                                   "ML.status", "Space", "Time", "Intensity", "Scale", "Trigger",
+                                   "How actions were selected", "Infrastructure affected / removed", "Implementation & management",
+                                   "Public policy implementation", "Strategy", "Road Safety Perception & Comfort",
+                                   "MW.purpose", "MW.anticipated.longevity", "MW.type.sector", "MW.mode.type", "MW.modes", "MW.approaches",
+                                   "Date.announced", "Date.started", "City", "lon", "lat"))
+
+dic <- varnames %>%
+  left_join(data_dic %>%
+              mutate(Varname = recode(Varname,
+                                      "Infrastructure affected/removed" = "Infrastructure affected / removed",
+                                      "Road safety perception & comfort" = "Road Safety Perception & Comfort",
+                                      "ML.Status" = "ML.status",
+                                      "World.region" = "World.Region")), by = "Varname") %>%
+  mutate(Varlabel = ifelse(Varname == "Week.announced", "WeekAnn", Varlabel),
+         Varlabel = ifelse(Varname == "Week.started", "WeekImp", Varlabel),
+         Varlabel = ifelse(Varname == "World country", Varname, Varlabel),
+         Varlabel = ifelse(Varname == "lon", Varname, Varlabel),
+         Varlabel = ifelse(Varname == "lat", Varname, Varlabel),
+         Varlabel = ifelse(Varname == "Country.code.iso3", "Country.code", Varlabel),
+         Description = ifelse(Varname == "Week.announced", "Week action was announced or first mentioned in media", Description),
+         Description = ifelse(Varname == "Week.started", "Week action began", Description),
+         Description = ifelse(Varname == "World country", "Country in which the action occurred", Description),
+         Description = replace_na(Description, ""))
+
+## format dataset
+df_clean <- df_read %>%
+  mutate(Country.code = recode(Country.code,
+                               "GB-NIR" = "GB",
+                               "GB-SCT" = "GB",
+                               "GB-WLS" = "GB",
+                               "GB-ENG" = "GB"),
+         Country.code = ifelse(Country == "Malta" & Country.code == "US", NA, Country.code),
+         Country.code = tidyr::replace_na(Country.code, "unknown"),
+         Country = recode(Country,
+                          "CANADA" = "Canada"),
+         Country = ifelse(Country.code == "GB", "United Kingdom", Country),
+         Country.region = recode(Country.region, "Kentucky, Ohio" = "Kentucky"),
+         Country.region = ifelse(City == "Florida", "Florida", Country.region),
+         Country.region = ifelse(City == "Connecticut", "Connecticut", Country.region),
+         Country.region = ifelse(City == "Colorado", "Colorado", Country.region),
+         Country.region = ifelse(City == "Washington", "Washington", Country.region),
+         Country.region = ifelse(City == "Massachusetts", "Massachusetts", Country.region),
+         Country.region = ifelse(City == "New York City", "New York", Country.region),
+         Country.region = ifelse(City == "Nassau County", "New York", Country.region),
+         Country.region = ifelse(City == "Wisconsin", "Wisconsin", Country.region),
+         Country.region = ifelse(City == "Milwaukee", "Wisconsin", Country.region),
+         Country.region = ifelse(City == "Metro Boston", "Massachusetts", Country.region),
+         Country.region = ifelse(City == "Washington State", "Washington", Country.region),
+         Country.region = ifelse(City == "New Jersey", "New Jersey", Country.region),
+         Country.region = ifelse(City == "Washington, D.C.", "District of Columbia", Country.region),
+         Country.region = ifelse(City == "Washington DC", "District of Columbia", Country.region),
+         Country.region = ifelse(City == "Las Vegas", "Nevada", Country.region),
+         Country.region = ifelse(City == "Los Angeles County", "California", Country.region),
+         Country.region = ifelse(City == "Detroit", "Michigan", Country.region)) %>%
+  left_join(lookup, by = "Country.code") %>%
+  left_join(lookup_us_states, by = "Country.region") %>%
+  mutate(Country = Gnm(Country),
+         Country.code.iso3 = Gcd(Country.code.iso3),
+         Country.region = Gnm(Country.region)) %>%
+  select(-us_state_id)
+
+# format dates
+df_time <- df_clean %>% select(ID, Date.announced, Date.started)
+df_time <- df_time %>% unnest(Date.started) %>%
+  mutate(Week.announced = as.character(cut(as.Date(Date.announced), "week")),
+         Week.started = as.character(cut(as.Date(Date.started), "week")),
+         Date.announced = as.character(as.Date(Date.announced)),
+         Date.started = as.character(as.Date(Date.started))) %>%
+  select(ID, Date.announced, Date.started, Week.announced, Week.started)
+
+# select variables
+df <- df_clean %>% select(-Date.announced, -Date.started) %>%
+  left_join(df_time, by = "ID") %>%
+  left_join(df_cities_complete, by = "City") %>%
+  mutate(Country = Gnm(Country),
+         `World country` = Cat(Country),
+         Country.code.iso3 = Gcd(Country.code.iso3),
+         Country.region = Gnm(Country.region),
+         World.Region = Cat(World.Region)) %>%
+  select(all_of(dic$Varname))
+
+names(df) <- dic$Varlabel
+
+## create final dictionary
+f_without_descriptions <- homodatum::fringe(df)$dic
+dic_prep <- dic %>% select(label = Varlabel, description = Description)
+df_dic <- f_without_descriptions %>%
+  left_join(dic_prep, by = "label") %>%
+  select(label, id, description, hdType)
+
+# create country lookup
+country_lookup <- df %>% distinct(Country, Country.code)
+
+# create caption with sources for graphs
+sources <- "Sources of data: 'It wasn't so hard' Covid-19 mobility database. PBIC, NUMO, Mobility Works, Streetplans, EpiAndes, Datasketch (2020). Full citation details at bit.ly/mobility-actions"
+caption <- paste0("<p style='font-family:Ubuntu;color:#293845;font-size:12px;'>",sources,"</p>")
+
+
+### shiny app -----------------------------------------------------------------------------------
+
+# Define UI
 ui <- panelsPage(styles = styles,
                  panel(id = "panel_data",
                        title = "Choose data",
