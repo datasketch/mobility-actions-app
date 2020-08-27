@@ -113,7 +113,7 @@ df_dic <- readRDS("data/covid_mobility_actions_dictionary.RDS")
 country_lookup <- df %>% distinct(Country, Country.code)
 sources <- "Sources of data: 'It wasn't so hard' Covid-19 mobility database. PBIC, NUMO, Mobility Works, Streetplans, EpiAndes, Datasketch (2020). Full citation details at bit.ly/mobility-actions"
 caption <- paste0("<p style='font-family:Ubuntu;color:#293845;font-size:12px;'>",sources,"</p>")
-data_link <- "https://docs.google.com/spreadsheets/d/1T8LE4p0-L96xiVtHsqARHiLsHsFwS8oQAT1Y2KteMXc/"
+data_link <- "https://docs.google.com/spreadsheets/d/1_rJoqel3UkhQ2j7H_CwDTo7-8Uom1Vv26lKVWo_1O6k/edit?ts=5f47b671#gid=789320453"
 
 # Define UI for data download app ----
 ui <- panelsPage(styles = styles,
@@ -495,8 +495,8 @@ server <- function(input, output, session) {
     }
   })
 
-  callModule(downloadImage, "download_plot", graph = reactive(download_opts()),
-             lib = "highcharter", formats = c("html","jpeg", "pdf", "png"))
+  downloadImageServer("download_plot", element = reactive(download_opts()),
+                      lib = "highcharter", formats = c("html","jpeg", "pdf", "png"))
 
 
   data_download <- reactive({
