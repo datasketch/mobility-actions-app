@@ -182,22 +182,22 @@ server <- function(input, output, session) {
   inputData <- reactive({
     req(input$dataset)
     if(input$dataset == "dat_viz"){
-      df %>% select(-Country, -Country.code, -Country.region, -City, -lon, -lat)
+      df %>% select(-Country, -Country.code, -State, -City, -lon, -lat)
     } else if (input$dataset == "dat_map"){
       df %>% rename(`Actions total` = Country.code) %>%
-        select(-Country, -Country.region, -`Date started`, -`Date announced`,
-               -`Week started`, -`Week announced`,
-               -`World region`, -`World country`, -City, -lon, -lat)
+        select(-Country, -State, -DateImp, -DateAnn,
+               -WeekImp, -WeekAnn,
+               -Region, -`World country`, -City, -lon, -lat)
     } else if (input$dataset == "dat_map_us") {
-      df %>% filter(Country.code == "USA") %>% rename(`Actions total` = Country.region) %>%
-        select(-Country, -Country.code, -`Date started`, -`Date announced`,
-               -`Week started`, -`Week announced`,
-               -`World region`, -`World country`, -City, -lon, -lat)
+      df %>% filter(Country.code == "USA") %>% rename(`Actions total` = State) %>%
+        select(-Country, -Country.code, -DateImp, -DateAnn,
+               -WeekImp, -WeekAnn,
+               -Region, -`World country`, -City, -lon, -lat)
     } else {
       df %>% rename(`Actions total` = City) %>%
-        select(-Country, -Country.region, -Country.code, -`Date started`, -`Date announced`,
-               -`Week started`, -`Week announced`,
-               -`World region`, -`World country`, -lon, -lat)
+        select(-Country, -State, -Country.code, -DateImp, -DateAnn,
+               -WeekImp, -WeekAnn,
+               -Region, -`World country`, -lon, -lat)
     }
   })
 
@@ -245,7 +245,7 @@ server <- function(input, output, session) {
       selectizeInput("var_order",
                      div(class="title-data-select", "Select up to two variables:"),
                      choices = list_var,
-                     selected = "action_types",
+                     selected = "type",
                      multiple = TRUE,
                      options = list(maxItems = 2,
                                     plugins= list('remove_button', 'drag_drop')))
@@ -272,7 +272,7 @@ server <- function(input, output, session) {
     data <- data_draw()
     if(is.null(data) | dic_draw()$label == "Actions total"){
       if (input$dataset == "dat_map_us"){
-        data <- df %>% filter(Country.code == "USA") %>% group_by(Country.region) %>% summarise(Actions = n()) %>% select(Country.region, Actions)
+        data <- df %>% filter(Country.code == "USA") %>% group_by(State) %>% summarise(Actions = n()) %>% select(State, Actions)
       } else if (input$dataset == "dat_map"){
         data <- df %>% group_by(Country.code, Country) %>% summarise(Actions = n()) %>% select(Country.code, Actions, Country)
       } else if (input$dataset == "dat_map_city"){
@@ -281,9 +281,9 @@ server <- function(input, output, session) {
     } else {
       req(input$selected_cat)
       if (input$dataset == "dat_map_us"){
-        data <- cbind(df %>% filter(Country.code == "USA") %>% select(Country.region), data) %>%
+        data <- cbind(df %>% filter(Country.code == "USA") %>% select(State), data) %>%
           filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
-          group_by(Country.region) %>% summarise(Count = n()) %>% select(Country.region, Count)
+          group_by(State) %>% summarise(Count = n()) %>% select(State, Count)
       } else if (input$dataset == "dat_map"){
         data <- cbind(df %>% select(Country.code, Country), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
           group_by(Country.code, Country) %>% summarise(Count = n()) %>% select(Country.code, Count, Country)
@@ -433,7 +433,7 @@ server <- function(input, output, session) {
 
     if(is.null(data) | dic_draw()$label == "Actions total"){
       if (input$dataset == "dat_map_us"){
-        tooltip <- "<b>State:</b> {Country.region}<br/><b>Actions:</b> {Actions}"
+        tooltip <- "<b>State:</b> {State}<br/><b>Actions:</b> {Actions}"
         map_name <- "usa_states"
       } else if (input$dataset == "dat_map"){
         tooltip <- "<b>Country:</b> {Country}<br/><b>Actions:</b> {Actions}"
@@ -446,7 +446,7 @@ server <- function(input, output, session) {
     } else {
       req(input$selected_cat)
       if (input$dataset == "dat_map_us"){
-        tooltip <- "<b>State:</b> {Country.region}<br/><b>Count:</b> {Count}"
+        tooltip <- "<b>State:</b> {State}<br/><b>Count:</b> {Count}"
         map_name <- "usa_states"
       } else if (input$dataset == "dat_map"){
         tooltip <- "<b>Country:</b> {Country}<br/><b>Count:</b> {Count}"
@@ -502,10 +502,10 @@ server <- function(input, output, session) {
     }
     if(input$dataset == "dat_map_us"){
       if(is.null(data) | dic_draw()$label == "Actions total"){
-        dd <- data_draw_map() %>% ungroup() %>% select(State = Country.region, Actions)
+        dd <- data_draw_map() %>% ungroup() %>% select(State = State, Actions)
       } else {
         req(input$selected_cat)
-        dd <- data_draw_map() %>% ungroup() %>% select(State = Country.region, Count)
+        dd <- data_draw_map() %>% ungroup() %>% select(State = State, Count)
         names(dd) <- c("State", input$selected_cat)
       }
     }
