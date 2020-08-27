@@ -15,6 +15,7 @@ library(homodatum)
 library(hgchmagic)
 
 webshot::install_phantomjs()
+gs4_deauth()
 
 frtypes_doc_viz <- suppressWarnings(yaml::read_yaml("conf/frtypes_viz.yaml"))
 frtypes_doc_map <- suppressWarnings(yaml::read_yaml("conf/frtypes_map.yaml"))
@@ -110,8 +111,14 @@ h4 {
 
 ### load data -----------------------------------------------------------------------------------
 
-## link to googlesheet
+# link to googlesheet
 data_link <- "https://docs.google.com/spreadsheets/d/1_rJoqel3UkhQ2j7H_CwDTo7-8Uom1Vv26lKVWo_1O6k/edit?ts=5f47b671#gid=789320453"
+
+# load dataset
+df_read <- read_sheet(data_link)
+
+# load data dictionary
+df_read_dic <- read_sheet(data_link, sheet = "variable-dictionary")
 
 ## load lookup tables
 # iso2 iso3 lookup
@@ -121,12 +128,6 @@ lookup_us_states <- read.csv("data/usa-states.csv") %>%
   select(Country.region = name, us_state_id = id)
 # cities lookup
 df_cities_complete <- readRDS("data/clean_data_with_cities_long_lat.RDS")
-
-## load google sheets
-# load dataset
-df_read <- read_sheet(data_link)
-# load data dictionary
-df_read_dic <- read_sheet(data_link, sheet = "variable-dictionary")
 
 
 ### format data -----------------------------------------------------------------------------------
