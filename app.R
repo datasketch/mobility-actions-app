@@ -42,6 +42,9 @@ styles <- "
  color: #293845;
 }
 
+h4 {
+    color: #df5c33;
+}
 
 .control-label {
  color: #df5c33;
@@ -125,9 +128,9 @@ ui <- panelsPage(styles = styles,
                            actionButton(inputId='viewAllData', label="View complete dataset",
                                         icon = icon("th"),
                                         onclick = paste0("window.open('",data_link,"', '_blank')")),
-                           downloadButton("downloadCSV", "Download current selection")
-                           # ,
-                           # uiOutput("dataDict")
+                           downloadButton("downloadCSV", "Download current selection"),
+                           br(),
+                           uiOutput("dataDict")
                          )
                        )),
                  panel(id = "panel_viz",
@@ -151,23 +154,30 @@ server <- function(input, output, session) {
     }
   })
 
-  # dataDictHover <- reactive({
-  #   if (is.null(input$var_order) | input$var_order == "actions_total") return ("")
-  #   if(length(input$var_order) == 1){
-  #   tags$div(tags$h6(df_dic %>% filter(id == input$var_order) %>% pull(label)),
-  #            tags$p(df_dic %>% filter(id == input$var_order) %>% pull(description))
-  #   )
-  #   } else if (length(input$var_order) == 2) {
-  #     tags$div(tags$h6(df_dic %>% filter(id == input$var_order[1]) %>% pull(label)),
-  #              tags$p(df_dic %>% filter(id == input$var_order[1]) %>% pull(description)),
-  #              tags$h6(df_dic %>% filter(id == input$var_order[2]) %>% pull(label)),
-  #              tags$p(df_dic %>% filter(id == input$var_order[2]) %>% pull(description)))
-  #   }
-  # })
+  dataDictText <- reactive({
+    if (is.null(input$var_order)) return ("")
+    if(input$var_order == "actions_total"){
+      tags$div(tags$h4("Actions total"),
+               tags$p("Total number of actions")
+               )
+    } else if (length(input$var_order) == 1){
+      tags$div(tags$h4(df_dic %>% filter(id == input$var_order) %>% pull(label)),
+               tags$p(df_dic %>% filter(id == input$var_order) %>% pull(description))
+               )
+    } else if (length(input$var_order) == 2) {
+      tags$div(tags$h4(df_dic %>% filter(id == input$var_order[1]) %>% pull(label)),
+               tags$p(df_dic %>% filter(id == input$var_order[1]) %>% pull(description)),
+               tags$br(),
+               tags$h4(df_dic %>% filter(id == input$var_order[2]) %>% pull(label)),
+               tags$p(df_dic %>% filter(id == input$var_order[2]) %>% pull(description))
+               )
+    }
+  })
 
   output$dataDict <- renderUI({
-    if (is.null(input$var_order) | input$var_order == "actions_total") return ()
-    tags$div(tags$h5(infoTooltip("Data dictionary", dataDictHover())))
+    if (is.null(input$var_order)) return ()
+    dataDictText()
+    # tags$div(tags$h5(infoTooltip("Data dictionary", dataDictHover())))
   })
 
   output$choose_data <- renderUI({
