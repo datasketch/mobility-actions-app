@@ -122,7 +122,7 @@ df_read_dic <- read_sheet(data_link, sheet = "variable-dictionary")
 
 ## load lookup tables
 # iso2 iso3 lookup
-lookup <- read.csv("data/lookup_iso2_iso3.csv") %>% select(Country.code = iso2, Country.code.iso3 = iso3)
+lookup <- read.csv("data/lookup_iso2_iso3.csv")
 # us states lookup
 lookup_us_states <- read.csv("data/usa-states.csv") %>%
   select(Country.region = name, us_state_id = id)
@@ -133,7 +133,13 @@ df_cities_complete <- readRDS("data/clean_data_with_cities_long_lat.RDS")
 ### format data -----------------------------------------------------------------------------------
 
 ## format dictionary
-data_dic <- df_read_dic %>% select(Varlabel, Varname, Description = `Variable Description`)
+data_dic <- df_read_dic %>% select(Varlabel, Varname, Description = `Variable Description`) %>%
+  mutate(Varlabel = gsub("country", "Country", Varlabel),
+         Varlabel = gsub("city", "City", Varlabel),
+         Varlabel = gsub("state", "State", Varlabel),
+         Varlabel = gsub("dateimp", "DateImp", Varlabel),
+         Varlabel = gsub("dateann", "DateAnn", Varlabel),
+         Varlabel = gsub("region", "Region", Varlabel))
 # varnames (format like column names in data sheet) --> NAMES CAN BE ADDED OR REMOVED HERE
 varnames <- data.frame(Varname = c("Country.code.iso3", "Country", "Country.region", "Master action types",
                                    "Week.announced", "Week.started", "World.Region", "World country",
@@ -163,12 +169,16 @@ dic <- varnames %>%
 
 ## format dataset
 df_clean <- df_read %>%
+  left_join(lookup %>% select(Country.code.repl = iso2, Country = name), by = "Country") %>%
   mutate(Country.code = recode(Country.code,
                                "GB-NIR" = "GB",
                                "GB-SCT" = "GB",
                                "GB-WLS" = "GB",
-                               "GB-ENG" = "GB"),
+                               "GB-ENG" = "GB",
+                               "UK" = "GB"),
          Country.code = ifelse(Country == "Malta" & Country.code == "US", NA, Country.code),
+         Country.code = ifelse(Country.code == "US" & Country != "United States", NA, Country.code),
+         Country.code = ifelse(is.na(Country.code) & complete.cases(Country), Country.code.repl, Country.code),
          Country.code = tidyr::replace_na(Country.code, "unknown"),
          Country = recode(Country,
                           "CANADA" = "Canada"),
@@ -191,7 +201,7 @@ df_clean <- df_read %>%
          Country.region = ifelse(City == "Las Vegas", "Nevada", Country.region),
          Country.region = ifelse(City == "Los Angeles County", "California", Country.region),
          Country.region = ifelse(City == "Detroit", "Michigan", Country.region)) %>%
-  left_join(lookup, by = "Country.code") %>%
+  left_join(lookup %>% select(Country.code = iso2, Country.code.iso3 = iso3), by = "Country.code") %>%
   left_join(lookup_us_states, by = "Country.region") %>%
   mutate(Country = Gnm(Country),
          Country.code.iso3 = Gcd(Country.code.iso3),
@@ -199,7 +209,10 @@ df_clean <- df_read %>%
   select(-us_state_id)
 
 # format dates
-df_time <- df_clean %>% select(ID, Date.announced, Date.started)
+df_time <- df_clean %>%
+  mutate(Date.started.wrong.format = map_lgl(Date.started, is.character)) %>%
+  filter(!Date.started.wrong.format) %>%
+  select(ID, Date.announced, Date.started)
 df_time <- df_time %>% unnest(Date.started) %>%
   mutate(Week.announced = as.character(cut(as.Date(Date.announced), "week")),
          Week.started = as.character(cut(as.Date(Date.started), "week")),
@@ -231,7 +244,7 @@ df_dic <- f_without_descriptions %>%
 country_lookup <- df %>% distinct(Country, Country.code)
 
 # create caption with sources for graphs
-sources <- "Sources of data: 'It wasn't so hard' Covid-19 mobility database. PBIC, NUMO, Mobility Works, Streetplans, EpiAndes, Datasketch (2020). Full citation details at bit.ly/mobility-actions"
+sources <- "Sources of data: 'Shifting Streets' Covid-19 mobility reponses around the world. PBIC, NUMO, Mobility Works, Streetplans, EpiAndes, Datasketch (2020). Full citation details at bit.ly/mobility-actions"
 caption <- paste0("<p style='font-family:Ubuntu;color:#293845;font-size:12px;'>",sources,"</p>")
 
 
@@ -517,8 +530,8 @@ server <- function(input, output, session) {
     #                                   opts_viz(), theme = theme_draw()
     #
     # )))
-    # browser()
     data <- data_draw()
+    if(ncol(data) == 1 & names(data) == "type"){names(data) <- "Type"}
     print(names(data))
     viz_name <- viz_name()
     dataLabels_show <- FALSE
