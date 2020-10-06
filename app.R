@@ -48,6 +48,10 @@ h4 {
     color: #df5c33;
 }
 
+.leaflet-top, .leaflet-bottom {
+    z-index: 1 !important;
+}
+
 .control-label {
  color: #df5c33;
  font-weight: 700;
@@ -609,6 +613,7 @@ server <- function(input, output, session) {
                                            na_color = "#EAEAEA",
                                            caption = caption,
                                            border_weight = 0.75)
+    if(viz == "lflt_choropleth_GlnGltNum"){viz <- "lflt_bubbles_GlnGltNum"}
     do.call(viz, c(list(data = data_draw_map(), opts = opts
     ))
     )
