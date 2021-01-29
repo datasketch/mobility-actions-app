@@ -73,6 +73,10 @@ h4 {
  background-color: #c14c2d !important;
 }
 
+.button-checkmark {
+ display: none;
+}
+
 .buttons-group .button-style {
  background-color: #bdcad1 !important;
 }
@@ -116,10 +120,11 @@ h4 {
 ### load data -----------------------------------------------------------------------------------
 
 # link to googlesheet
-data_link <- "https://docs.google.com/spreadsheets/d/1_rJoqel3UkhQ2j7H_CwDTo7-8Uom1Vv26lKVWo_1O6k/edit?ts=5f47b671#gid=789320453"
+# data_link <- "https://docs.google.com/spreadsheets/d/1_rJoqel3UkhQ2j7H_CwDTo7-8Uom1Vv26lKVWo_1O6k/edit?ts=5f47b671#gid=789320453"
+data_link <- "https://docs.google.com/spreadsheets/d/1_rJoqel3UkhQ2j7H_CwDTo7-8Uom1Vv26lKVWo_1O6k/edit?ts=5f47b671#gid=1972370104"
 
 # load dataset
-df_read <- read_sheet(data_link)
+df_read <- read_sheet(data_link, sheet = "All_data_Jan2021")
 
 # load data dictionary
 df_read_dic <- read_sheet(data_link, sheet = "variable-dictionary")
@@ -136,40 +141,23 @@ df_cities_complete <- readRDS("data/clean_data_with_cities_long_lat.RDS")
 
 ### format data -----------------------------------------------------------------------------------
 
-## format dictionary
-data_dic <- df_read_dic %>% select(Varlabel, Varname, Description = `Variable Description`) %>%
-  mutate(Varlabel = gsub("country", "Country", Varlabel),
-         Varlabel = gsub("city", "City", Varlabel),
-         Varlabel = gsub("state", "State", Varlabel),
-         Varlabel = gsub("dateimp", "DateImp", Varlabel),
-         Varlabel = gsub("dateann", "DateAnn", Varlabel),
-         Varlabel = gsub("region", "Region", Varlabel))
-# varnames (format like column names in data sheet) --> NAMES CAN BE ADDED OR REMOVED HERE
-varnames <- data.frame(Varname = c("Country.code.iso3", "Country", "Country.region", "Master action types",
-                                   "Week.announced", "Week.started", "World.Region", "World country",
-                                   "ML.status", "Space", "Time", "Intensity", "Scale", "Trigger",
-                                   "How actions were selected", "Infrastructure affected / removed", "Implementation & management",
-                                   "Public policy implementation", "Strategy", "Road Safety Perception & Comfort",
-                                   "MW.purpose", "MW.anticipated.longevity", "MW.type.sector", "MW.mode.type", "MW.modes", "MW.approaches",
-                                   "Date.announced", "Date.started", "City", "lon", "lat"))
+plotting_vars <- c("country", "state", "type", "region",
+                   "statusml", "space", "time", "intensity", "scale", "trigger",
+                   "selection", "infrastructure", "implementation",
+                   "policy", "strategy", "perception",
+                   "purpose", "longevity", "sector", "modetype", "mode", "approach",
+                   "dateann", "dateimp", "city")
 
-dic <- varnames %>%
-  left_join(data_dic %>%
-              mutate(Varname = recode(Varname,
-                                      "Infrastructure affected/removed" = "Infrastructure affected / removed",
-                                      "Road safety perception & comfort" = "Road Safety Perception & Comfort",
-                                      "ML.Status" = "ML.status",
-                                      "World.region" = "World.Region")), by = "Varname") %>%
-  mutate(Varlabel = ifelse(Varname == "Week.announced", "WeekAnn", Varlabel),
-         Varlabel = ifelse(Varname == "Week.started", "WeekImp", Varlabel),
-         Varlabel = ifelse(Varname == "World country", Varname, Varlabel),
-         Varlabel = ifelse(Varname == "lon", Varname, Varlabel),
-         Varlabel = ifelse(Varname == "lat", Varname, Varlabel),
-         Varlabel = ifelse(Varname == "Country.code.iso3", "Country.code", Varlabel),
-         Description = ifelse(Varname == "Week.announced", "Week action was announced or first mentioned in media", Description),
-         Description = ifelse(Varname == "Week.started", "Week action began", Description),
-         Description = ifelse(Varname == "World country", "Country in which the action occurred", Description),
-         Description = replace_na(Description, ""))
+extra_dic <- data.frame(Varlabel = c("countrycode", "weekann", "weekimp", "worldcountry", "lon", "lat"),
+                        Varname = c("Country.code", "Week.announced", "Week.started", "World country", "lon", "lat"),
+                        Description = c("", "Week action was announced or first mentioned in media", "Week action began",
+                                        "Country in which the action occurred", "", ""))
+
+# format dictionary
+dic <- df_read_dic %>% select(Varlabel, Varname, Description = `Variable Description`) %>%
+  filter(Varlabel %in% plotting_vars) %>%
+  bind_rows(extra_dic) %>%
+  mutate(Description = replace_na(Description, ""))
 
 ## format dataset
 df_clean <- df_read %>%
@@ -216,30 +204,29 @@ df_clean <- df_read %>%
 df_time <- df_clean %>%
   mutate(Date.started.wrong.format = map_lgl(Date.started, is.character)) %>%
   filter(!Date.started.wrong.format) %>%
-  select(ID, Date.announced, Date.started)
+  select(UID, Date.announced, Date.started)
+
 df_time <- df_time %>% unnest(Date.started) %>%
   mutate(Week.announced = as.character(cut(as.Date(Date.announced), "week")),
          Week.started = as.character(cut(as.Date(Date.started), "week")),
          Date.announced = as.character(as.Date(Date.announced)),
          Date.started = as.character(as.Date(Date.started))) %>%
-  select(ID, Date.announced, Date.started, Week.announced, Week.started)
+  select(UID, Date.announced, Date.started, Week.announced, Week.started)
 
 # select variables
 df <- df_clean %>% select(-Date.announced, -Date.started) %>%
-  left_join(df_time, by = "ID") %>%
+  left_join(df_time, by = "UID") %>%
   left_join(df_cities_complete, by = "City") %>%
   mutate(Country = Gnm(Country),
          `World country` = Cat(Country),
-         Country.code.iso3 = Gcd(Country.code.iso3),
+         Country.code = Gcd(Country.code.iso3),
          Country.region = Gnm(Country.region),
-         World.Region = Cat(World.Region)) %>%
+         World.region = Cat(World.region)) %>%
   select(all_of(dic$Varname))
-
-names(df) <- dic$Varlabel
 
 ## create final dictionary
 f_without_descriptions <- homodatum::fringe(df)$dic
-dic_prep <- dic %>% select(label = Varlabel, description = Description)
+dic_prep <- dic %>% select(label = Varname, description = Description)
 df_dic <- f_without_descriptions %>%
   left_join(dic_prep, by = "label") %>%
   select(label, id, description, hdType)
@@ -276,10 +263,7 @@ ui <- panelsPage(styles = styles,
                        title = "Visualize data",
                        title_plugin = uiOutput("download"),
                        can_collapse = FALSE,
-                       # body = withLoader(uiOutput("viz"),
-                       #                   type = "image",
-                       #                   loader = "img/loading_fucsia.gif"),
-                       body = uiOutput("viz"),
+                       body = withLoader(uiOutput("viz"), type = "image",loader = "img/loading_gris.gif"),
                        footer = uiOutput("viz_icons")))
 
 
@@ -331,26 +315,37 @@ server <- function(input, output, session) {
   inputData <- reactive({
     req(input$dataset)
     if(input$dataset == "dat_viz"){
-      df %>% select(-Country, -Country.code, -State, -City, -lon, -lat)
+      excluded_vars_dic <- c("country", "country_code", "country_region", "city", "lon", "lat")
+      excluded_vars <- df_dic %>% filter(id %in% excluded_vars_dic) %>% pull(label)
+      df %>% select(-one_of(excluded_vars))
     } else if (input$dataset == "dat_map"){
+      excluded_vars_dic <- c("country", "country_region", "date_started", "date_announced",
+                         "week_started", "week_announced", "world_region",
+                         "world_country", "city", "lon", "lat")
+      excluded_vars <- df_dic %>% filter(id %in% excluded_vars_dic) %>% pull(label)
       df %>% rename(`Actions total` = Country.code) %>%
-        select(-Country, -State, -DateImp, -DateAnn,
-               -WeekImp, -WeekAnn,
-               -Region, -`World country`, -City, -lon, -lat)
+        select(-one_of(excluded_vars))
     } else if (input$dataset == "dat_map_us") {
-      df %>% filter(Country.code == "USA") %>% rename(`Actions total` = State) %>%
-        select(-Country, -Country.code, -DateImp, -DateAnn,
-               -WeekImp, -WeekAnn,
-               -Region, -`World country`, -City, -lon, -lat)
+      excluded_vars_dic <- c("country", "country_code", "date_started", "date_announced",
+                             "week_started", "week_announced", "world_region",
+                             "world_country", "city", "lon", "lat")
+      excluded_vars <- df_dic %>% filter(id %in% excluded_vars_dic) %>% pull(label)
+      df %>% filter(Country.code == "USA") %>%
+        rename(`Actions total` = Country.region) %>%
+        select(-one_of(excluded_vars))
     } else {
+      excluded_vars_dic <- c("country", "country_region", "country_code", "date_started", "date_announced",
+                             "week_started", "week_announced", "world_region",
+                             "world_country", "city", "lon", "lat")
+      excluded_vars <- df_dic %>% filter(id %in% excluded_vars_dic) %>% pull(label)
       df %>% rename(`Actions total` = City) %>%
-        select(-Country, -State, -Country.code, -DateImp, -DateAnn,
-               -WeekImp, -WeekAnn,
-               -Region, -`World country`, -lon, -lat)
+        select(-one_of(excluded_vars))
     }
   })
 
   output$select_category <- renderUI({
+    req(input$dataset)
+    req(dic_draw())
     if (input$dataset == "dat_viz" | dic_draw()$label == "Actions total") return ()
     selectInput("selected_cat",
                 div(class="title-data-select","Select category:"),
@@ -394,7 +389,7 @@ server <- function(input, output, session) {
       selectizeInput("var_order",
                      div(class="title-data-select", "Select up to two variables:"),
                      choices = list_var,
-                     selected = "type",
+                     selected = "primary_type",
                      multiple = TRUE,
                      options = list(maxItems = 2,
                                     plugins= list('remove_button', 'drag_drop')))
@@ -421,26 +416,26 @@ server <- function(input, output, session) {
     data <- data_draw()
     if(is.null(data) | dic_draw()$label == "Actions total"){
       if (input$dataset == "dat_map_us"){
-        data <- df %>% filter(Country.code == "USA") %>% group_by(State) %>% summarise(Actions = n()) %>% select(State, Actions)
+        data <- df %>% filter(Country.code == "USA") %>% group_by(Country.region) %>% summarise(Actions = n()) %>% select(Country.region, Actions)
       } else if (input$dataset == "dat_map"){
         data <- df %>% group_by(Country.code, Country) %>% summarise(Actions = n()) %>% select(Country.code, Actions, Country)
       } else if (input$dataset == "dat_map_city"){
         data <- df %>% group_by(lon, lat, City) %>% summarise(Actions = n()) %>% select(lon, lat, Actions, City)
       }
     } else {
-      req(input$selected_cat)
-      if (input$dataset == "dat_map_us"){
-        data <- cbind(df %>% filter(Country.code == "USA") %>% select(State), data) %>%
-          filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
-          group_by(State) %>% summarise(Count = n()) %>% select(State, Count)
-      } else if (input$dataset == "dat_map"){
-        data <- cbind(df %>% select(Country.code, Country), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
-          group_by(Country.code, Country) %>% summarise(Count = n()) %>% select(Country.code, Count, Country)
-      } else if (input$dataset == "dat_map_city"){
-        data <- cbind(df %>% select(City, lon, lat), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
-          group_by(lon, lat, City) %>% summarise(Count = n()) %>% select(lon, lat, Count, City)
-      }
-
+      if(!is.null(input$selected_cat)){
+        if (input$dataset == "dat_map_us"){
+          data <- cbind(df %>% filter(Country.code == "USA") %>% select(Country.region), data) %>%
+            filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
+            group_by(Country.region) %>% summarise(Count = n()) %>% select(Country.region, Count)
+        } else if (input$dataset == "dat_map"){
+          data <- cbind(df %>% select(Country.code, Country), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
+            group_by(Country.code, Country) %>% summarise(Count = n()) %>% select(Country.code, Count, Country)
+        } else if (input$dataset == "dat_map_city"){
+          data <- cbind(df %>% select(City, lon, lat), data) %>% filter(.data[[dic_draw()$label]] == input$selected_cat) %>%
+            group_by(lon, lat, City) %>% summarise(Count = n()) %>% select(lon, lat, Count, City)
+          }
+        }
       }
     data
   })
@@ -500,6 +495,7 @@ server <- function(input, output, session) {
   })
 
   output$viz_icons <- renderUI({
+    req(possible_viz())
     if(input$dataset == "dat_viz"){
       path <- 'img/svg/viz/'
       active <- actual_but$active_viz
@@ -510,9 +506,8 @@ server <- function(input, output, session) {
     buttonImageInput('viz_selection',
                      "Visualization type",
                      images = possible_viz(),
-                     checkmarkColor = "#df5c33",
+                     #checkmarkColor = "#df5c33",
                      path = path,
-                     format = 'svg',
                      active = active)
   })
 
@@ -568,6 +563,8 @@ server <- function(input, output, session) {
   })
 
   lftl_viz <- reactive({
+    req(input$dataset)
+    if(input$dataset == "dat_viz") return()
     geotype <- gsub("-", "", ftype_draw())
     print(geotype)
     viz <- paste0("lflt_", actual_but$active_map, "_", geotype)
@@ -582,7 +579,7 @@ server <- function(input, output, session) {
 
     if(is.null(data) | dic_draw()$label == "Actions total"){
       if (input$dataset == "dat_map_us"){
-        tooltip <- "<b>State:</b> {State}<br/><b>Actions:</b> {Actions}"
+        tooltip <- "<b>State:</b> {Country.region}<br/><b>Actions:</b> {Actions}"
         map_name <- "usa_states"
       } else if (input$dataset == "dat_map"){
         tooltip <- "<b>Country:</b> {Country}<br/><b>Actions:</b> {Actions}"
@@ -595,7 +592,7 @@ server <- function(input, output, session) {
     } else {
       req(input$selected_cat)
       if (input$dataset == "dat_map_us"){
-        tooltip <- "<b>State:</b> {State}<br/><b>Count:</b> {Count}"
+        tooltip <- "<b>State:</b> {Country.region}<br/><b>Count:</b> {Count}"
         map_name <- "usa_states"
       } else if (input$dataset == "dat_map"){
         tooltip <- "<b>Country:</b> {Country}<br/><b>Count:</b> {Count}"
@@ -652,10 +649,10 @@ server <- function(input, output, session) {
     }
     if(input$dataset == "dat_map_us"){
       if(is.null(data) | dic_draw()$label == "Actions total"){
-        dd <- data_draw_map() %>% ungroup() %>% select(State = State, Actions)
+        dd <- data_draw_map() %>% ungroup() %>% select(State = Country.region, Actions)
       } else {
         req(input$selected_cat)
-        dd <- data_draw_map() %>% ungroup() %>% select(State = State, Count)
+        dd <- data_draw_map() %>% ungroup() %>% select(State = Country.region, Count)
         names(dd) <- c("State", input$selected_cat)
       }
     }
