@@ -142,7 +142,8 @@ df_cities_complete <- readRDS("data/clean_data_with_cities_long_lat.RDS")
 ### format data -----------------------------------------------------------------------------------
 
 plotting_vars <- c("country", "state", "type", "region",
-                   "statusml", "space", "time", "intensity", "scale", "trigger",
+                   # "statusml",
+                   "space", "time", "intensity", "scale", "trigger",
                    "selection", "infrastructure", "implementation",
                    "policy", "strategy", "perception",
                    "purpose", "longevity", "sector", "modetype", "mode", "approach",
